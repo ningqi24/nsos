@@ -1,0 +1,56 @@
+/* ============================================================
+   nsos - base.css
+   全局 reset + 设计令牌（Design Token）地基
+   后续所有主题 / 皮肤 = 一套 :root 变量，禁止散落硬编码颜色
+   ============================================================ */
+
+:root {
+  /* ---- 语义色板（P4 主题引擎接管） ---- */
+  --os-bg-0:        #000000;   /* 纯黑背景 */
+  --os-bg-1:        #101014;   /* 深色表面 */
+  --os-bg-2:        #1c1c22;   /* 卡片表面 */
+  --os-fg-0:        #ffffff;   /* 主文字 */
+  --os-fg-1:        rgba(255,255,255,.7); /* 次文字 */
+  --os-fg-2:        rgba(255,255,255,.45); /* 弱文字 */
+  --os-accent:      #3b82f6;   /* 强调色 */
+  --os-glass:       rgba(255,255,255,.06); /* 毛玻璃基底 */
+
+  /* ---- 动效令牌（统一过渡规范） ---- */
+  --os-dur-fast:    .15s;
+  --os-dur-norm:    .3s;
+  --os-dur-slow:    .5s;
+  --os-ease-out:    cubic-bezier(.22, .61, .36, 1);
+  --os-ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+
+  /* ---- 布局 ---- */
+  --os-safe-top:    0px;
+  --os-safe-bottom: 0px;
+}
+
+/* ---- Reset ---- */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--os-bg-0);
+  color: var(--os-fg-0);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC",
+               "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---- 系统渲染根 ---- */
+#os-root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--os-bg-0);
+}
+
+img { display: block; max-width: 100%; }
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+input { font: inherit; color: inherit; }
