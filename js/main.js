@@ -62,12 +62,37 @@
     jump: (s) => OS.state.transition(s, { source: 'debug' })
   };
 
+  /* ---------- 桌面交互（P2.4） ---------- */
+  // 点击图标 -> 进入应用层（P5 占位）
+  OS.bus.on('launcher:launch', ({ app }) => {
+    const nameEl = document.getElementById('app-name');
+    if (nameEl) nameEl.textContent = app.name;
+    OS.state.transition('app', { source: 'launcher', app: app.id });
+  });
+
+  // 双击状态栏 -> 锁定回锁屏（演示用，后续换手势）
+  let lastTap = 0;
+  const sbEl = document.getElementById('os-sysui');
+  if (sbEl) {
+    sbEl.addEventListener('pointerdown', () => {
+      const now = Date.now();
+      if (now - lastTap < 350) {
+        lastTap = 0;
+        OS.state.transition('locked', { source: 'statusbar-lock' });
+      } else {
+        lastTap = now;
+      }
+    });
+  }
+
   /* ---------- 初始化 ---------- */
   function init() {
     LayerManager.init();
     if (OS.input && OS.input.start) OS.input.start();   // 输入层
     if (OS.modes && OS.modes.init) OS.modes.init();     // Fastboot/Recovery
-    if (OS.locked && OS.locked.init) OS.locked.init();  // 锁屏/桌面占位
+    if (OS.locked && OS.locked.init) OS.locked.init();  // 真锁屏
+    if (OS.statusbar && OS.statusbar.init) OS.statusbar.init();  // 状态栏常驻
+    if (OS.launcher && OS.launcher.init) OS.launcher.init();      // 桌面 Launcher
     OS.bootReady();
     // 上电演示：默认直接进入 boot（后续可改为由开机键触发）
     OS.state.transition('boot', { source: 'auto-power-on' });
