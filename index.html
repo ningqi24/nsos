@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/layers.css">
   <link rel="stylesheet" href="css/boot.css">
+  <link rel="stylesheet" href="css/desktop.css">
 </head>
 <body>
   <!-- 系统渲染根：所有 Layer 挂载于此 -->
@@ -50,25 +51,33 @@
       <div class="ft-foot">↑/↓ 选择 · Enter 确认</div>
     </section>
 
-    <!-- 桌面层 -->
+    <!-- 桌面层：真锁屏 -->
     <section id="layer-locked"      class="os-layer" data-state="locked" hidden>
-      <div class="lock-wrap">
+      <div class="lock-content">
         <div class="lock-time">--:--</div>
-        <div class="lock-date">nsos · 周六 8月22日</div>
-        <button id="lock-unlock" class="lock-btn">点击解锁</button>
+        <div class="lock-date" id="lock-date"></div>
+        <div class="lock-msg" id="lock-msg">解锁后使用 nsos 桌面</div>
+        <div class="lock-grip"></div>
       </div>
+      <div class="lock-hint">上滑或点击解锁</div>
     </section>
 
+    <!-- 桌面层：Launcher -->
     <section id="layer-home"        class="os-layer" data-state="home" hidden>
-      <div class="home-placeholder">
-        <div class="home-icon">◉</div>
-        <p>桌面系统建设中（P2）</p>
-        <button id="home-lock" class="lock-btn">锁定</button>
+      <div class="launcher">
+        <div class="launcher-pad"></div>
+        <div class="launcher-grid"></div>
+        <div class="launcher-dock"></div>
       </div>
     </section>
 
     <!-- 应用层（P5 填充） -->
-    <section id="layer-app"         class="os-layer" data-state="app" hidden></section>
+    <section id="layer-app"         class="os-layer" data-state="app" hidden>
+      <div class="app-placeholder">
+        <div class="ap-name" id="app-name">应用</div>
+        <p>应用容器建设中（P5）</p>
+      </div>
+    </section>
 
     <!-- 全局系统 UI 挂载点（状态栏/控制中心等，P2/P3） -->
     <div id="os-sysui"></div>
@@ -86,5 +95,8 @@
   <script src="js/boot/boot.js"></script>
   <script src="js/boot/modes.js"></script>
   <script src="js/boot/locked.js"></script>
+  <!-- 桌面层模块（P2） -->
+  <script src="js/desktop/statusbar.js"></script>
+  <script src="js/desktop/launcher.js"></script>
 </body>
 </html>
