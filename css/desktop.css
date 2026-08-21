@@ -4,6 +4,10 @@
  * 风格基调：毛玻璃 + 圆角 + 轻量（对齐 hyperOS / OriginOS 观感）
  * ============================================================ */
 
+/* 关键兜底：hidden 层必须彻底不渲染/不拦截（压过 .os-layer 的 display）
+   与 layers.css 中的同名规则一致，此处冗余一份以覆盖 CDN 旧缓存 */
+.os-layer[hidden] { display: none !important; }
+
 /* ---------- 状态栏（os-sysui 常驻） ---------- */
 #sys-statusbar {
   position: absolute;
