@@ -1,0 +1,174 @@
+/* ============================================================
+ * nsos - desktop.css (P2)
+ * 桌面层视觉：状态栏 / 真锁屏 / Launcher 桌面 / 图标网格 / Dock
+ * 风格基调：毛玻璃 + 圆角 + 轻量（对齐 hyperOS / OriginOS 观感）
+ * ============================================================ */
+
+/* ---------- 状态栏（os-sysui 常驻） ---------- */
+#sys-statusbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--os-fg-0);
+  text-shadow: 0 1px 3px rgba(0,0,0,.35);
+  z-index: 990;
+}
+.sb-left { display: flex; align-items: center; gap: 6px; }
+.sb-right { display: flex; align-items: center; gap: 8px; }
+.sb-signal { display: flex; align-items: flex-end; gap: 2px; }
+.sb-signal i {
+  display: block;
+  width: 3px;
+  background: currentColor;
+  border-radius: 1px;
+}
+.sb-signal i:nth-child(1) { height: 5px; }
+.sb-signal i:nth-child(2) { height: 8px; }
+.sb-signal i:nth-child(3) { height: 11px; }
+.sb-signal i:nth-child(4) { height: 14px; }
+.sb-battery {
+  width: 24px; height: 12px;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  position: relative;
+  padding: 1.5px;
+}
+.sb-battery::after {
+  content: '';
+  position: absolute;
+  right: -4px; top: 3px;
+  width: 2px; height: 5px;
+  background: currentColor;
+  border-radius: 0 1px 1px 0;
+}
+.sb-battery i {
+  display: block;
+  height: 100%;
+  width: 80%;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+/* ---------- 真锁屏 ---------- */
+#layer-locked {
+  justify-content: flex-end;
+  background:
+    radial-gradient(circle at 78% 18%, rgba(147,197,253,.28), transparent 46%),
+    linear-gradient(165deg, #2b2f6b 0%, #0f1730 52%, #05060f 100%);
+}
+.lock-content {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 20px;
+}
+.lock-time { font-size: 96px; font-weight: 200; letter-spacing: 2px; line-height: 1; }
+.lock-date { margin-top: 14px; font-size: 16px; color: var(--os-fg-1); letter-spacing: 1px; }
+.lock-msg { margin-top: 18px; font-size: 13px; color: var(--os-fg-2); }
+.lock-grip {
+  margin: 0 auto 26px;
+  width: 130px; height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,.5);
+}
+.lock-hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--os-fg-2);
+  letter-spacing: 1px;
+  padding-bottom: 34px;
+}
+
+/* ---------- Launcher 桌面 ---------- */
+#layer-home {
+  background:
+    radial-gradient(circle at 20% 24%, rgba(59,130,246,.32), transparent 42%),
+    radial-gradient(circle at 82% 68%, rgba(168,85,247,.22), transparent 44%),
+    linear-gradient(168deg, #1c2440 0%, #101426 55%, #0a0c18 100%);
+}
+.launcher {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* 状态栏在桌面上的占位，防止内容顶到顶部 */
+.launcher-pad { height: 52px; flex-shrink: 0; }
+
+.launcher-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-content: start;
+  gap: 18px 8px;
+  padding: 6px 20px 0;
+}
+.app-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--os-dur-fast) var(--os-ease-out);
+}
+.app-icon:active { transform: scale(.88); }
+.app-icon .ic {
+  width: 58px; height: 58px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.25);
+}
+.app-icon .nm {
+  font-size: 12px;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,.5);
+}
+/* 图标配色 */
+.ic-blue   { background: linear-gradient(145deg, #60a5fa, #2563eb); }
+.ic-purple { background: linear-gradient(145deg, #c084fc, #7c3aed); }
+.ic-green  { background: linear-gradient(145deg, #4ade80, #16a34a); }
+.ic-orange { background: linear-gradient(145deg, #fbbf24, #ea580c); }
+.ic-red    { background: linear-gradient(145deg, #f87171, #dc2626); }
+.ic-cyan   { background: linear-gradient(145deg, #22d3ee, #0891b2); }
+
+/* Dock */
+.launcher-dock {
+  flex-shrink: 0;
+  margin: 0 16px 26px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  border-radius: 24px;
+  background: rgba(255,255,255,.09);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 10px 30px rgba(0,0,0,.3);
+}
+.launcher-dock .app-icon .ic { width: 52px; height: 52px; border-radius: 14px; }
+
+/* ---------- App 占位（P5） ---------- */
+#layer-app {
+  background: #0c0f1e;
+}
+.app-placeholder {
+  margin: auto;
+  text-align: center;
+  color: var(--os-fg-1);
+}
+.app-placeholder .ap-name { font-size: 20px; margin-bottom: 10px; color: var(--os-fg-0); }
