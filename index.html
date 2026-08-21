@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>nsos</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layers.css">
+  <link rel="stylesheet" href="css/boot.css">
+</head>
+<body>
+  <!-- 系统渲染根：所有 Layer 挂载于此 -->
+  <div id="os-root">
+
+    <!-- 关机画面 -->
+    <section id="layer-poweroff"    class="os-layer" data-state="poweroff" hidden>
+      <div class="poweroff-wrap">
+        <p>已关机</p>
+        <p class="poweroff-hint">按任意键重新开机</p>
+      </div>
+    </section>
+
+    <!-- 引导层：Bootloader Logo -->
+    <section id="layer-bootloader"  class="os-layer" data-state="boot" hidden>
+      <div class="boot-logo-wrap">
+        <div class="boot-logo">nsos</div>
+        <div class="boot-tag">POWERED BY KERNEL v0.1</div>
+      </div>
+    </section>
+
+    <!-- 引导层：开机动画 -->
+    <section id="layer-boot-anim"   class="os-layer" data-state="boot" hidden>
+      <div class="boot-anim-wrap">
+        <div class="boot-anim-ring"></div>
+        <div class="boot-anim-bar"><i id="boot-progress"></i></div>
+        <div class="boot-anim-hint">音量下 = Fastboot · 音量上 = Recovery</div>
+      </div>
+    </section>
+
+    <!-- 工程模式层 -->
+    <section id="layer-fastboot"    class="os-layer" data-state="fastboot" hidden>
+      <div class="ft-head"><span>FASTBOOT MODE</span><span class="ft-ver">nsos 0.1.0</span></div>
+      <ul class="ft-menu" id="ft-menu"></ul>
+      <div class="ft-foot">↑/↓ 选择 · Enter 确认 · 数字键快捷选择</div>
+    </section>
+
+    <section id="layer-recovery"    class="os-layer" data-state="recovery" hidden>
+      <div class="rc-head">RECOVERY MODE</div>
+      <ul class="ft-menu" id="rc-menu"></ul>
+      <div class="ft-foot">↑/↓ 选择 · Enter 确认</div>
+    </section>
+
+    <!-- 桌面层 -->
+    <section id="layer-locked"      class="os-layer" data-state="locked" hidden>
+      <div class="lock-wrap">
+        <div class="lock-time">--:--</div>
+        <div class="lock-date">nsos · 周六 8月22日</div>
+        <button id="lock-unlock" class="lock-btn">点击解锁</button>
+      </div>
+    </section>
+
+    <section id="layer-home"        class="os-layer" data-state="home" hidden>
+      <div class="home-placeholder">
+        <div class="home-icon">◉</div>
+        <p>桌面系统建设中（P2）</p>
+        <button id="home-lock" class="lock-btn">锁定</button>
+      </div>
+    </section>
+
+    <!-- 应用层（P5 填充） -->
+    <section id="layer-app"         class="os-layer" data-state="app" hidden></section>
+
+    <!-- 全局系统 UI 挂载点（状态栏/控制中心等，P2/P3） -->
+    <div id="os-sysui"></div>
+
+  </div>
+
+  <!-- 内核模块：顺序敏感 -->
+  <script src="js/core/event-bus.js"></script>
+  <script src="js/core/state-machine.js"></script>
+  <script src="js/core/storage.js"></script>
+  <script src="js/core/core.js"></script>
+  <script src="js/main.js"></script>
+  <!-- 启动链模块（P1） -->
+  <script src="js/boot/input.js"></script>
+  <script src="js/boot/boot.js"></script>
+  <script src="js/boot/modes.js"></script>
+  <script src="js/boot/locked.js"></script>
+</body>
+</html>
