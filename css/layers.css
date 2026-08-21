@@ -1,0 +1,32 @@
+/* ============================================================
+   nsos - layers.css
+   系统 Layer 层容器：每个系统界面独占一个全屏 layer，
+   由 LayerManager 依据状态机当前状态控制显隐
+   ============================================================ */
+
+.os-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--os-bg-0);
+  /* 过渡动画统一走动画引擎，默认无显隐动画 */
+}
+
+/* 系统 UI 层（状态栏 / 控制中心等全局元素）永远置于最上 */
+#os-sysui {
+  position: absolute;
+  inset: 0;
+  z-index: 900;
+  pointer-events: none;
+}
+#os-sysui > * { pointer-events: auto; }
+
+/* layer 进入的默认淡入，保证切换不突兀 */
+.os-layer.os-active { animation: os-layer-in var(--os-dur-norm) var(--os-ease-out) both; }
+
+@keyframes os-layer-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
