@@ -14,6 +14,9 @@
   /* 过渡动画统一走动画引擎，默认无显隐动画 */
 }
 
+/* 关键：hidden 层必须彻底不渲染/不拦截，优先级压过 .os-layer 的 display */
+.os-layer[hidden] { display: none !important; }
+
 /* 系统 UI 层（状态栏 / 控制中心等全局元素）永远置于最上 */
 #os-sysui {
   position: absolute;
