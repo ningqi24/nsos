@@ -1,0 +1,156 @@
+/* ============================================================
+ * nsos - boot.css (P1)
+ * 启动链视觉：Bootloader Logo / 开机动画 / Fastboot / Recovery
+ * / 锁屏占位 / 关机画面
+ * ============================================================ */
+
+/* ---------- Bootloader：点亮 Logo ---------- */
+#layer-bootloader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 40%, #0b0b14 0%, #000 72%);
+}
+.boot-logo-wrap { text-align: center; }
+.boot-logo {
+  font-size: 66px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  color: #fff;
+  text-shadow: 0 0 28px rgba(59,130,246,.85), 0 0 90px rgba(59,130,246,.35);
+  animation: boot-logo-in 1.2s var(--os-ease-out) both;
+}
+.boot-tag {
+  margin-top: 16px;
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: var(--os-fg-2);
+  animation: boot-tag-in 1.2s .35s var(--os-ease-out) both;
+}
+@keyframes boot-logo-in { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
+@keyframes boot-tag-in  { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- 开机动画 ---------- */
+#layer-boot-anim {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+.boot-anim-wrap { display: flex; flex-direction: column; align-items: center; }
+.boot-anim-ring {
+  width: 84px; height: 84px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,.1);
+  border-top-color: var(--os-accent);
+  animation: os-spin 1s linear infinite;
+}
+@keyframes os-spin { to { transform: rotate(360deg); } }
+.boot-anim-bar {
+  width: 220px; height: 3px;
+  margin-top: 42px;
+  border-radius: 2px;
+  background: rgba(255,255,255,.12);
+  overflow: hidden;
+}
+.boot-anim-bar i {
+  display: block; height: 100%; width: 0%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--os-accent), #a78bfa);
+}
+.boot-anim-hint {
+  margin-top: 26px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--os-fg-2);
+}
+
+/* ---------- Fastboot / Recovery：工程终端风 ---------- */
+#layer-fastboot, #layer-recovery {
+  justify-content: center;
+  align-items: stretch;
+  padding: 44px 40px;
+  background: #000;
+  font-family: "SF Mono", Consolas, "Courier New", monospace;
+}
+.ft-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+  letter-spacing: 2px;
+  color: #9be79b;
+  margin-bottom: 30px;
+}
+.rc-head {
+  font-size: 15px;
+  letter-spacing: 2px;
+  color: #ffb3b3;
+  margin-bottom: 30px;
+}
+.ft-ver { color: #555f55; font-size: 12px; align-self: center; }
+.ft-menu { list-style: none; width: 100%; }
+.ft-menu li {
+  padding: 15px 16px;
+  margin: 5px 0;
+  font-size: 14px;
+  color: #cfd6cf;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background var(--os-dur-fast), color var(--os-dur-fast);
+}
+.ft-menu li.sel {
+  color: #000;
+  background: #9be79b;
+  font-weight: 700;
+}
+#layer-recovery .ft-menu li.sel { background: #ffb3b3; }
+.ft-foot {
+  margin-top: 34px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #555f55;
+}
+
+/* ---------- 锁屏占位（P2 真锁屏） ---------- */
+#layer-locked {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #1e1b4b 0%, #0f172a 55%, #000 100%);
+}
+.lock-wrap { display: flex; flex-direction: column; align-items: center; }
+.lock-time { font-size: 90px; font-weight: 200; letter-spacing: 2px; text-shadow: 0 2px 24px rgba(0,0,0,.5); }
+.lock-date { margin-top: 10px; font-size: 15px; color: var(--os-fg-1); }
+.lock-btn {
+  margin-top: 44px;
+  padding: 12px 30px;
+  border-radius: 999px;
+  background: var(--os-glass);
+  border: 1px solid rgba(255,255,255,.22);
+  color: #fff;
+  font-size: 14px;
+  transition: background var(--os-dur-fast);
+}
+.lock-btn:hover { background: rgba(255,255,255,.14); }
+
+/* ---------- Home 占位（P2 桌面） ---------- */
+#layer-home {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 70% 20%, rgba(59,130,246,.18), transparent 45%),
+    linear-gradient(160deg, #14151f 0%, #000 100%);
+}
+.home-placeholder { display: flex; flex-direction: column; align-items: center; gap: 18px; color: var(--os-fg-1); }
+.home-icon { font-size: 40px; color: var(--os-accent); }
+
+/* ---------- 关机画面 ---------- */
+#layer-poweroff {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+.poweroff-wrap { text-align: center; color: var(--os-fg-1); font-size: 16px; }
+.poweroff-hint { margin-top: 14px; font-size: 12px; color: var(--os-fg-2); letter-spacing: 1px; }
