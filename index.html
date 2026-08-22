@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="css/base.css?v=5">
   <link rel="stylesheet" href="css/tokens.css?v=5">
   <link rel="stylesheet" href="css/layers.css?v=5">
-  <link rel="stylesheet" href="css/boot.css?v=6">
+  <link rel="stylesheet" href="css/boot.css?v=7">
   <link rel="stylesheet" href="css/desktop.css?v=5">
   <link rel="stylesheet" href="css/system-fix.css?v=5">
 </head>
@@ -43,10 +43,10 @@
       <div class="boot-anim-wrap">
         <div class="boot-anim-ring"></div>
         <div class="boot-anim-bar"><i id="boot-progress"></i></div>
-        <div class="boot-anim-hint">音量下 = Fastboot · 音量上 = Recovery</div>
+        <div class="boot-anim-hint">点击下方按钮进入工程模式</div>
         <div class="boot-keys boot-anim-keys">
-          <span class="boot-key" data-vol="down">音量下 · Fastboot</span>
-          <span class="boot-key" data-vol="up">音量上 · Recovery</span>
+          <button class="boot-key" type="button" data-vol="down">FASTBOOT</button>
+          <button class="boot-key" type="button" data-vol="up">RECOVERY</button>
         </div>
       </div>
     </section>
