@@ -59,14 +59,18 @@
 
     unread() { return this.items.filter(i => !i.read).length; },
 
-    /* ---------- 状态栏铃铛 + 角标 ---------- */
+    /* ---------- 状态栏铃铛 + 角标（os-badge 组件） ---------- */
     _buildBadge() {
       const right = document.querySelector('#sys-statusbar .sb-right');
       if (!right) return;
       const badge = document.createElement('span');
       badge.id = 'sb-notif';
       badge.className = 'sb-notif';
-      badge.innerHTML = '<span class="sb-bell">🔔</span><span class="sb-bell-dot"></span>';
+      badge.innerHTML = '<span class="sb-bell">🔔</span>';
+      const dot = document.createElement('os-badge');
+      dot.id = 'sb-bell-dot';
+      dot.setAttribute('count', '0');
+      badge.appendChild(dot);
       badge.addEventListener('click', () => {
         if (OS.controlcenter) OS.controlcenter.toggle();
       });
@@ -75,12 +79,12 @@
     },
 
     _updateBadge() {
-      const dot = document.querySelector('#sb-notif .sb-bell-dot');
+      const dot = document.getElementById('sb-bell-dot');
       const bell = document.querySelector('#sb-notif .sb-bell');
       if (!dot || !bell) return;
       const u = this.unread();
-      dot.textContent = u > 0 ? (u > 99 ? '99+' : u) : '';
-      dot.style.display = u > 0 ? 'flex' : 'none';
+      if (u > 0) dot.setAttribute('count', String(u));
+      else dot.removeAttribute('count');
       bell.style.opacity = u > 0 ? '1' : '.5';
     },
 
