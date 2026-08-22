@@ -10,21 +10,21 @@
 
   // 桌面应用清单（P5 会替换为真实应用容器）
   const APPS = [
-    { id: 'photos',  name: '相册',   icon: '🖼️', cls: 'ic-blue'   },
-    { id: 'camera',  name: '相机',   icon: '📷', cls: 'ic-purple' },
-    { id: 'clock',   name: '时钟',   icon: '🕐', cls: 'ic-green'  },
-    { id: 'weather', name: '天气',   icon: '⛅', cls: 'ic-cyan'   },
-    { id: 'notes',   name: '备忘录', icon: '📝', cls: 'ic-orange' },
-    { id: 'settings',name: '设置',   icon: '⚙️', cls: 'ic-red'    },
-    { id: 'browser', name: '浏览器', icon: '🌐', cls: 'ic-blue'   },
-    { id: 'music',   name: '音乐',   icon: '🎵', cls: 'ic-purple' }
+    { id: 'photos',  name: '相册',   icon: 'photos',  cls: 'ic-blue'   },
+    { id: 'camera',  name: '相机',   icon: 'camera',  cls: 'ic-purple' },
+    { id: 'clock',   name: '时钟',   icon: 'clock',   cls: 'ic-green'  },
+    { id: 'weather', name: '天气',   icon: 'weather', cls: 'ic-cyan'   },
+    { id: 'notes',   name: '备忘录', icon: 'notes',   cls: 'ic-orange' },
+    { id: 'settings',name: '设置',   icon: 'settings',cls: 'ic-red'    },
+    { id: 'browser', name: '浏览器', icon: 'browser', cls: 'ic-blue'   },
+    { id: 'music',   name: '音乐',   icon: 'music',   cls: 'ic-purple' }
   ];
 
   const DOCK = [
-    { id: 'phone',   name: '电话', icon: '📞', cls: 'ic-green'  },
-    { id: 'messages',name: '短信', icon: '💬', cls: 'ic-cyan'   },
-    { id: 'apps',    name: '应用', icon: '⬛', cls: 'ic-orange' },
-    { id: 'camera2', name: '相机', icon: '📷', cls: 'ic-purple' }
+    { id: 'phone',   name: '电话', icon: 'phone',   cls: 'ic-green'  },
+    { id: 'messages',name: '短信', icon: 'messages',cls: 'ic-cyan'   },
+    { id: 'apps',    name: '应用', icon: 'apps',    cls: 'ic-orange' },
+    { id: 'camera2', name: '相机', icon: 'camera',  cls: 'ic-purple' }
   ];
 
   const LAUNCHER = {
@@ -48,7 +48,7 @@
     _makeIcon(app) {
       const el = document.createElement('div');
       el.className = 'app-icon';
-      el.innerHTML = `<div class="ic ${app.cls}">${app.icon}</div><span class="nm">${app.name}</span>`;
+      el.innerHTML = `<div class="ic ${app.cls}"><os-icon name="${app.icon}"></os-icon></div><span class="nm">${app.name}</span>`;
       el.addEventListener('click', () => OS.bus.emit('launcher:launch', { app }));
       return el;
     }
