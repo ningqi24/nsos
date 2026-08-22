@@ -1,0 +1,93 @@
+/* ============================================================
+ * nsos - tokens.css (P4 铺垫 · 设计层定稿)
+ * Design Token 唯一权威来源：色 / 间距 / 圆角 / 字体 / 动效 / 阴影
+ * 所有组件与页面只消费 var(--os-*) ，禁止散落硬编码。
+ * 主题引擎（P4）只需覆盖这一套变量即可整体换肤/切暗色。
+ * 引入顺序：base.css -> tokens.css（tokens 覆盖并集齐全部）-> 其余
+ * ============================================================ */
+
+:root {
+  /* ================= 语义色板 ================= */
+  --os-bg-0:        #000000;   /* 纯黑背景 */
+  --os-bg-1:        #101014;   /* 深色表面 */
+  --os-bg-2:        #1c1c22;   /* 卡片表面 */
+  --os-bg-3:        #26262e;   /* 浮层表面 */
+
+  --os-fg-0:        #ffffff;   /* 主文字 */
+  --os-fg-1:        rgba(255,255,255,.7); /* 次文字 */
+  --os-fg-2:        rgba(255,255,255,.45); /* 弱文字 */
+  --os-fg-3:        rgba(255,255,255,.25); /* 禁用文字 */
+
+  --os-accent:      #3b82f6;   /* 主强调色 */
+  --os-accent-soft: rgba(59,130,246,.24); /* 强调色浅底 */
+  --os-success:     #22c55e;
+  --os-warning:     #f59e0b;
+  --os-danger:      #ef4444;
+
+  --os-glass:       rgba(255,255,255,.06); /* 毛玻璃基底 */
+  --os-border:      rgba(255,255,255,.1);  /* 描边 */
+
+  /* ================= 间距（4 进制） ================= */
+  --os-space-1: 4px;
+  --os-space-2: 8px;
+  --os-space-3: 12px;
+  --os-space-4: 16px;
+  --os-space-5: 24px;
+  --os-space-6: 32px;
+
+  /* ================= 圆角 ================= */
+  --os-radius-sm: 8px;
+  --os-radius-md: 12px;
+  --os-radius-lg: 18px;
+  --os-radius-xl: 24px;
+  --os-radius-full: 999px;
+
+  /* ================= 字体 ================= */
+  --os-font-xs: 11px;
+  --os-font-sm: 12px;
+  --os-font-md: 14px;
+  --os-font-lg: 16px;
+  --os-font-xl: 20px;
+  --os-font-2xl: 28px;
+  --os-font-weight-norm: 400;
+  --os-font-weight-mid: 600;
+  --os-font-weight-bold: 700;
+
+  /* ================= 动效 ================= */
+  --os-dur-fast:    .15s;
+  --os-dur-norm:    .3s;
+  --os-dur-slow:    .5s;
+  --os-ease-out:    cubic-bezier(.22, .61, .36, 1);
+  --os-ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+
+  /* ================= 阴影 ================= */
+  --os-shadow-1: 0 2px 8px  rgba(0,0,0,.25);
+  --os-shadow-2: 0 8px 24px rgba(0,0,0,.35);
+  --os-shadow-3: 0 18px 48px rgba(0,0,0,.5);
+
+  /* ================= 布局（刘海/手势条） ================= */
+  --os-safe-top:    0px;
+  --os-safe-bottom: 0px;
+
+  /* ================= 图标 ================= */
+  --os-icon-sm: 16px;
+  --os-icon-md: 20px;
+  --os-icon-lg: 24px;
+}
+
+/* ---------- 亮色主题预留（P4 开启，默认暗色） ---------- */
+.os-theme-light {
+  --os-bg-0:        #f5f6fa;
+  --os-bg-1:        #ffffff;
+  --os-bg-2:        #eef0f5;
+  --os-bg-3:        #e2e5ec;
+  --os-fg-0:        #101014;
+  --os-fg-1:        rgba(16,16,20,.7);
+  --os-fg-2:        rgba(16,16,20,.5);
+  --os-fg-3:        rgba(16,16,20,.3);
+  --os-glass:       rgba(16,16,20,.06);
+  --os-border:      rgba(16,16,20,.12);
+  --os-shadow-1: 0 2px 8px  rgba(16,16,20,.08);
+  --os-shadow-2: 0 8px 24px rgba(16,16,20,.12);
+  --os-shadow-3: 0 18px 48px rgba(16,16,20,.18);
+}
