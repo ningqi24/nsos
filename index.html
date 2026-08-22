@@ -22,11 +22,18 @@
       </div>
     </section>
 
-    <!-- 引导层：Bootloader Logo -->
+    <!-- 引导层：Bootloader Logo（Android 风格：中央机器人图标 + 品牌名 + 底部版本信息） -->
     <section id="layer-bootloader"  class="os-layer" data-state="boot" hidden>
       <div class="boot-logo-wrap">
+        <img class="boot-mascot" src="assets/android_robot.svg" alt="nsos mascot">
         <div class="boot-logo">nsos</div>
-        <div class="boot-tag">POWERED BY KERNEL v0.1</div>
+      </div>
+      <div class="boot-bottom">
+        <div class="boot-powered">POWERED BY HTML</div>
+        <div class="boot-keys">
+          <span class="boot-key" data-vol="down">音量下 · Fastboot</span>
+          <span class="boot-key" data-vol="up">音量上 · Recovery</span>
+        </div>
       </div>
     </section>
 
