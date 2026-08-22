@@ -4,30 +4,67 @@
  * / 锁屏占位 / 关机画面
  * ============================================================ */
 
-/* ---------- Bootloader：点亮 Logo ---------- */
+/* ---------- Bootloader：点亮 Logo（Android 风格） ---------- */
 #layer-bootloader {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   background: radial-gradient(circle at 50% 40%, #0b0b14 0%, #000 72%);
 }
-.boot-logo-wrap { text-align: center; }
-.boot-logo {
-  font-size: 66px;
-  font-weight: 800;
-  letter-spacing: 8px;
-  color: #fff;
-  text-shadow: 0 0 28px rgba(59,130,246,.85), 0 0 90px rgba(59,130,246,.35);
-  animation: boot-logo-in 1.2s var(--os-ease-out) both;
+.boot-logo-wrap { text-align: center; margin-top: -6vh; }
+.boot-mascot {
+  display: block;
+  width: 84px; height: 84px;
+  margin: 0 auto 14px;
+  filter: drop-shadow(0 0 14px rgba(164,198,57,.55)) drop-shadow(0 0 40px rgba(164,198,57,.22));
+  animation: boot-mascot-in 1s var(--os-ease-out) both;
 }
-.boot-tag {
-  margin-top: 16px;
-  font-size: 12px;
-  letter-spacing: 3px;
-  color: var(--os-fg-2);
+.boot-logo {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: #fff;
+  text-shadow: 0 0 18px rgba(59,130,246,.6), 0 0 60px rgba(59,130,246,.28);
+  animation: boot-logo-in 1.2s .15s var(--os-ease-out) both;
+}
+@keyframes boot-mascot-in { from { opacity: 0; transform: scale(.7) translateY(8px); } to { opacity: 1; transform: none; } }
+/* 底部信息：powered by + 音量键提示（类似 Android 开机画面底部小字） */
+.boot-bottom {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 44px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.boot-powered {
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: rgba(255,255,255,.55);
   animation: boot-tag-in 1.2s .35s var(--os-ease-out) both;
 }
-@keyframes boot-logo-in { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
+.boot-keys {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  animation: boot-tag-in 1.2s .6s var(--os-ease-out) both;
+}
+.boot-key {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.06);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,.55);
+  cursor: pointer;
+  transition: background var(--os-dur-fast), border-color var(--os-dur-fast);
+}
+.boot-key:hover { border-color: rgba(255,255,255,.4); }
+.boot-key:active { background: rgba(255,255,255,.16); }
+@keyframes boot-logo-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes boot-tag-in  { from { opacity: 0; } to { opacity: 1; } }
 
 /* ---------- 开机动画 ---------- */
