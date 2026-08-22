@@ -247,6 +247,8 @@
   border-color: rgba(59,130,246,.5);
 }
 .cc-tog.on .tog-ic { filter: none; }
+.cc-tog .cc-sw { margin-top: 4px; transform: scale(.82); transform-origin: center bottom; }
+.cc-tog os-slider { margin-top: 6px; }
 .cc-sliders {
   display: flex;
   flex-direction: column;
