@@ -9,10 +9,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
   background: radial-gradient(circle at 50% 40%, #0b0b14 0%, #000 72%);
 }
-.boot-logo-wrap { text-align: center; margin-top: -6vh; }
+.boot-logo-wrap { text-align: center; margin-top: -4vh; }
 .boot-mascot {
   display: block;
   width: 84px; height: 84px;
