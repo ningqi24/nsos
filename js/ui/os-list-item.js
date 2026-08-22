@@ -1,7 +1,7 @@
 /* ============================================================
  * nsos - os-list-item (Web Component)
  * 列表项（通知/设置通用）：
- *   <os-list-item icon="📶" title="系统更新完成" text="nsos 0.1.0 已就绪" time="09:12" unread></os-list-item>
+ *   <os-list-item icon="wifi" title="系统更新完成" text="nsos 0.1.0 已就绪" time="09:12" unread></os-list-item>
  * 点击回调：监听事件 "os-click"；可用 el.dismiss() 删除自身（带动画）。
  * ============================================================ */
 (function () {
@@ -91,7 +91,15 @@
 
     _render() {
       if (!this._title) return;
-      this._ic.textContent = this.getAttribute('icon') || '';
+      const icon = this.getAttribute('icon') || '';
+      /* icon 视为 os-icon 图标名（如 wifi），渲染为矢量图标 */
+      this._ic.innerHTML = '';
+      if (icon) {
+        const oi = document.createElement('os-icon');
+        oi.setAttribute('name', icon);
+        oi.setAttribute('size', '22');
+        this._ic.appendChild(oi);
+      }
       this._title.textContent = this.getAttribute('title') || '';
       this._time.textContent = this.getAttribute('time') || '';
       this._text.textContent = this.getAttribute('text') || '';
