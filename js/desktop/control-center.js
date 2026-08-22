@@ -12,14 +12,14 @@
   const OS = global.OS;
 
   const TOGGLES = [
-    { id: 'wifi',      label: 'Wi-Fi',   icon: '📶' },
-    { id: 'bluetooth', label: '蓝牙',    icon: '🔵' },
-    { id: 'airplane',  label: '飞行',    icon: '✈️' },
-    { id: 'torch',     label: '手电筒',  icon: '🔦' },
-    { id: 'save',      label: '省电',    icon: '🔋' },
-    { id: 'mute',      label: '静音',    icon: '🔕' },
-    { id: 'doze',      label: '免打扰',  icon: '🌙' },
-    { id: 'dark',      label: '深色',    icon: '🌓' }
+    { id: 'wifi',      label: 'Wi-Fi',   icon: 'wifi'      },
+    { id: 'bluetooth', label: '蓝牙',    icon: 'bluetooth' },
+    { id: 'airplane',  label: '飞行',    icon: 'airplane'  },
+    { id: 'torch',     label: '手电筒',  icon: 'torch'     },
+    { id: 'save',      label: '省电',    icon: 'save'      },
+    { id: 'mute',      label: '静音',    icon: 'mute'      },
+    { id: 'doze',      label: '免打扰',  icon: 'doze'      },
+    { id: 'dark',      label: '深色',    icon: 'dark'      }
   ];
 
   const CC = {
@@ -34,8 +34,8 @@
       panel.innerHTML = `
         <div class="cc-toggles"></div>
         <div class="cc-sliders">
-          <div class="cc-slider"><span>🔅 亮度</span><os-slider id="cc-brightness" min="20" max="100" value="100"></os-slider></div>
-          <div class="cc-slider"><span>🔊 音量</span><os-slider id="cc-volume" min="0" max="100" value="60"></os-slider></div>
+          <div class="cc-slider"><os-icon name="brightness" size="20"></os-icon><os-slider id="cc-brightness" min="20" max="100" value="100"></os-slider></div>
+          <div class="cc-slider"><os-icon name="volume" size="20"></os-icon><os-slider id="cc-volume" min="0" max="100" value="60"></os-slider></div>
         </div>
         <div class="cc-notifs" id="cc-notifs"></div>`;
       host.appendChild(panel);
@@ -62,7 +62,7 @@
         const on = OS.storage.get(key, t.id === 'wifi' || t.id === 'dark');
         const el = document.createElement('div');
         el.className = 'cc-tog' + (on ? ' on' : '');
-        el.innerHTML = `<span class="tog-ic">${t.icon}</span><span class="tog-nm">${t.label}</span>`;
+        el.innerHTML = `<span class="tog-ic"><os-icon name="${t.icon}"></os-icon></span><span class="tog-nm">${t.label}</span>`;
         const sw = document.createElement('os-switch');
         if (on) sw.setAttribute('checked', '');
         sw.className = 'cc-sw';
