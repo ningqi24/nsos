@@ -93,6 +93,9 @@
     if (OS.locked && OS.locked.init) OS.locked.init();  // 真锁屏
     if (OS.statusbar && OS.statusbar.init) OS.statusbar.init();  // 状态栏常驻
     if (OS.launcher && OS.launcher.init) OS.launcher.init();      // 桌面 Launcher
+    if (OS.notify && OS.notify.init) OS.notify.init();            // 通知服务（P3）
+    if (OS.controlcenter && OS.controlcenter.init) OS.controlcenter.init(); // 控制中心（P3）
+    if (OS.gesture && OS.gesture.init) OS.gesture.init();         // 手势导航（P3）
     OS.bootReady();
     // 上电演示：默认直接进入 boot（后续可改为由开机键触发）
     OS.state.transition('boot', { source: 'auto-power-on' });
