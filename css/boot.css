@@ -32,37 +32,87 @@
 .boot-bottom {
   position: absolute;
   left: 0; right: 0;
-  bottom: 44px;
+  bottom: 30px;
   text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  padding: 0 18px;
+  box-sizing: border-box;
 }
 .boot-powered {
   font-size: 11px;
   letter-spacing: 4px;
-  color: rgba(255,255,255,.55);
+  color: rgba(255,255,255,.45);
   animation: boot-tag-in 1.2s .35s var(--os-ease-out) both;
 }
 .boot-keys {
   display: flex;
-  justify-content: center;
-  gap: 18px;
+  justify-content: space-between;
+  gap: 16px;
   animation: boot-tag-in 1.2s .6s var(--os-ease-out) both;
 }
+/* 拟物（Neumorphism）方形虚拟键：对角亮暗双阴影 + 按下内凹 */
 .boot-key {
-  padding: 8px 16px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.22);
-  background: rgba(255,255,255,.06);
-  font-size: 11px;
-  letter-spacing: 1px;
-  color: rgba(255,255,255,.55);
+  flex: 1;
+  max-width: 46%;
+  appearance: none;
+  border: 0;
+  outline: none;
+  font-family: inherit;
+  padding: 15px 0;
+  border-radius: 9px;
+  background: linear-gradient(145deg, #171a24, #12141c);
+  box-shadow:
+    6px 6px 14px rgba(0, 0, 0, .62),
+    -6px -6px 14px rgba(255, 255, 255, .05);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-indent: 3px;
+  color: rgba(255, 255, 255, .78);
   cursor: pointer;
-  transition: background var(--os-dur-fast), border-color var(--os-dur-fast);
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform var(--os-dur-fast) var(--os-ease-out),
+    box-shadow var(--os-dur-fast) var(--os-ease-out),
+    color var(--os-dur-fast) ease;
 }
-.boot-key:hover { border-color: rgba(255,255,255,.4); }
-.boot-key:active { background: rgba(255,255,255,.16); }
+.boot-key:hover {
+  color: #fff;
+  box-shadow:
+    7px 7px 16px rgba(0, 0, 0, .68),
+    -7px -7px 16px rgba(255, 255, 255, .08);
+}
+.boot-key:active {
+  transform: translateY(1px) scale(.97);
+  color: var(--os-accent, #3b82f6);
+  box-shadow:
+    inset 5px 5px 12px rgba(0, 0, 0, .7),
+    inset -5px -5px 12px rgba(255, 255, 255, .04);
+  background: linear-gradient(145deg, #12141c, #171a24);
+}
+/* 点击水波扩散动效 */
+.boot-key::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 10px; height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .35);
+  transform: scale(0);
+  opacity: 0;
+  pointer-events: none;
+}
+.boot-key:active::after {
+  animation: boot-key-ripple .5s ease-out forwards;
+}
+@keyframes boot-key-ripple {
+  0%   { transform: scale(0);   opacity: .55; }
+  100% { transform: scale(16);  opacity: 0; }
+}
 @keyframes boot-logo-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes boot-tag-in  { from { opacity: 0; } to { opacity: 1; } }
 
@@ -100,7 +150,7 @@
   letter-spacing: 1px;
   color: var(--os-fg-2);
 }
-.boot-anim-keys { margin-top: 22px; }
+.boot-anim-keys { margin-top: 22px; width: 100%; max-width: 320px; }
 
 /* ---------- Fastboot / Recovery：工程终端风 ---------- */
 #layer-fastboot, #layer-recovery {
