@@ -34,8 +34,8 @@
       panel.innerHTML = `
         <div class="cc-toggles"></div>
         <div class="cc-sliders">
-          <div class="cc-slider"><span>🔅 亮度</span><input type="range" id="cc-brightness" min="20" max="100" value="100"></div>
-          <div class="cc-slider"><span>🔊 音量</span><input type="range" id="cc-volume" min="0" max="100" value="60"></div>
+          <div class="cc-slider"><span>🔅 亮度</span><os-slider id="cc-brightness" min="20" max="100" value="100"></os-slider></div>
+          <div class="cc-slider"><span>🔊 音量</span><os-slider id="cc-volume" min="0" max="100" value="60"></os-slider></div>
         </div>
         <div class="cc-notifs" id="cc-notifs"></div>`;
       host.appendChild(panel);
@@ -60,15 +60,19 @@
       TOGGLES.forEach((t) => {
         const key = 'cc:' + t.id;
         const on = OS.storage.get(key, t.id === 'wifi' || t.id === 'dark');
-        const el = document.createElement('button');
+        const el = document.createElement('div');
         el.className = 'cc-tog' + (on ? ' on' : '');
         el.innerHTML = `<span class="tog-ic">${t.icon}</span><span class="tog-nm">${t.label}</span>`;
-        el.addEventListener('click', () => {
-          const next = !el.classList.contains('on');
+        const sw = document.createElement('os-switch');
+        if (on) sw.setAttribute('checked', '');
+        sw.className = 'cc-sw';
+        sw.addEventListener('change', (e) => {
+          const next = e.detail.checked;
           el.classList.toggle('on', next);
           OS.storage.set(key, next);
           OS.bus.emit('cc:toggle', { id: t.id, on: next });
         });
+        el.appendChild(sw);
         container.appendChild(el);
       });
     },
@@ -78,14 +82,14 @@
       const vol = this.panel.querySelector('#cc-volume');
       if (bri) {
         bri.value = OS.storage.get('cc:brightness', 100);
-        bri.addEventListener('input', () => {
-          OS.storage.set('cc:brightness', Number(bri.value));
-          document.body.style.filter = `brightness(${bri.value / 100})`;
+        bri.addEventListener('input', (e) => {
+          OS.storage.set('cc:brightness', e.detail.value);
+          document.body.style.filter = `brightness(${e.detail.value / 100})`;
         });
       }
       if (vol) {
         vol.value = OS.storage.get('cc:volume', 60);
-        vol.addEventListener('input', () => OS.storage.set('cc:volume', Number(vol.value)));
+        vol.addEventListener('change', (e) => OS.storage.set('cc:volume', e.detail.value));
       }
     },
 
@@ -101,21 +105,16 @@
       items.forEach((n) => {
         const d = new Date(n.time);
         const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-        const row = document.createElement('div');
-        row.className = 'cc-notif' + (n.read ? ' read' : '');
-        row.innerHTML = `
-          <span class="n-ic">${n.icon}</span>
-          <div class="n-body">
-            <div class="n-title">${n.title}</div>
-            <div class="n-text">${n.text}</div>
-            <div class="n-time">${hm}</div>
-          </div>
-          <button class="n-x" title="移除">✕</button>`;
-        row.querySelector('.n-x').addEventListener('click', (e) => {
-          e.stopPropagation();
+        const row = document.createElement('os-list-item');
+        if (n.icon) row.setAttribute('icon', n.icon);
+        row.setAttribute('title', n.title);
+        row.setAttribute('text', n.text);
+        row.setAttribute('time', hm);
+        if (n.read) row.setAttribute('read', '');
+        row.addEventListener('os-dismiss', () => {
           if (OS.notify) OS.notify.remove(n.id);
         });
-        row.addEventListener('click', () => {
+        row.addEventListener('os-click', () => {
           n.read = true;
           if (OS.notify) { OS.notify._persist(); OS.notify._updateBadge(); OS.bus.emit('notify:change'); }
         });
