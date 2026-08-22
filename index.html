@@ -4,11 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>nsos</title>
-  <link rel="stylesheet" href="css/base.css?v=3">
-  <link rel="stylesheet" href="css/layers.css?v=3">
-  <link rel="stylesheet" href="css/boot.css?v=3">
-  <link rel="stylesheet" href="css/desktop.css?v=3">
-  <link rel="stylesheet" href="css/system-fix.css?v=3">
+  <link rel="stylesheet" href="css/base.css?v=4">
+  <link rel="stylesheet" href="css/tokens.css?v=4">
+  <link rel="stylesheet" href="css/layers.css?v=4">
+  <link rel="stylesheet" href="css/boot.css?v=4">
+  <link rel="stylesheet" href="css/desktop.css?v=4">
+  <link rel="stylesheet" href="css/system-fix.css?v=4">
 </head>
 <body>
   <!-- 系统渲染根：所有 Layer 挂载于此 -->
@@ -93,21 +94,28 @@
   </div>
 
   <!-- 内核模块：顺序敏感 -->
-  <script src="js/core/event-bus.js?v=3"></script>
-  <script src="js/core/state-machine.js?v=3"></script>
-  <script src="js/core/storage.js?v=3"></script>
-  <script src="js/core/core.js?v=3"></script>
-  <script src="js/main.js?v=3"></script>
+  <script src="js/core/event-bus.js?v=4"></script>
+  <script src="js/core/state-machine.js?v=4"></script>
+  <script src="js/core/storage.js?v=4"></script>
+  <script src="js/core/core.js?v=4"></script>
+  <script src="js/main.js?v=4"></script>
+  <!-- 组件代码库（P4 铺垫 · Web Components，框架无关） -->
+  <script src="js/ui/os-button.js?v=4"></script>
+  <script src="js/ui/os-switch.js?v=4"></script>
+  <script src="js/ui/os-slider.js?v=4"></script>
+  <script src="js/ui/os-list-item.js?v=4"></script>
+  <script src="js/ui/os-badge.js?v=4"></script>
+  <script src="js/ui/os-toast.js?v=4"></script>
   <!-- 启动链模块（P1） -->
-  <script src="js/boot/input.js?v=3"></script>
-  <script src="js/boot/boot.js?v=3"></script>
-  <script src="js/boot/modes.js?v=3"></script>
-  <script src="js/boot/locked.js?v=3"></script>
+  <script src="js/boot/input.js?v=4"></script>
+  <script src="js/boot/boot.js?v=4"></script>
+  <script src="js/boot/modes.js?v=4"></script>
+  <script src="js/boot/locked.js?v=4"></script>
   <!-- 桌面层模块（P2/P3） -->
-  <script src="js/desktop/statusbar.js?v=3"></script>
-  <script src="js/desktop/launcher.js?v=3"></script>
-  <script src="js/desktop/notifications.js?v=3"></script>
-  <script src="js/desktop/control-center.js?v=3"></script>
-  <script src="js/desktop/gestures.js?v=3"></script>
+  <script src="js/desktop/statusbar.js?v=4"></script>
+  <script src="js/desktop/launcher.js?v=4"></script>
+  <script src="js/desktop/notifications.js?v=4"></script>
+  <script src="js/desktop/control-center.js?v=4"></script>
+  <script src="js/desktop/gestures.js?v=4"></script>
 </body>
 </html>
