@@ -52,9 +52,9 @@
       }, 2600);
     },
 
-    /* 开机动画期间的隐藏入口 */
+    /* Logo 与开机动画期间的隐藏入口（音量下 -> Fastboot，音量上 -> Recovery） */
     _handleKey(e) {
-      if (this.seq !== 'animation') return;
+      if (this.seq !== 'bootloader' && this.seq !== 'animation') return;
       if (e.type === 'key' && e.key === 'vol-down') {
         this.interrupt = 'fastboot';
         OS.state.transition('fastboot', { source: 'vol-down' });
@@ -78,6 +78,16 @@
 
   // 开机动画隐藏入口
   OS.bus.on('input:key', (e) => BOOT._handleKey(e));
+
+  // 底部虚拟音量键（手机端无实体键盘/音量键时可用）
+  document.addEventListener('click', (e) => {
+    const k = e.target.closest('.boot-key');
+    if (!k || OS.state.current !== 'boot') return;
+    const vol = k.dataset.vol;
+    if (vol === 'down' || vol === 'up') {
+      OS.bus.emit('input:key', { type: 'key', key: 'vol-' + vol });
+    }
+  });
 
   // 关机状态下任意键开机
   OS.bus.on('input:key', () => {
