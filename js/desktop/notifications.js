@@ -29,7 +29,7 @@
       const item = {
         id: 'n' + Date.now() + Math.random().toString(36).slice(2, 6),
         time: Date.now(),
-        icon: n.icon || '🔔',
+        icon: n.icon || 'bell',
         title: n.title || '通知',
         text: n.text || '',
         app: n.app || 'system',
@@ -66,7 +66,7 @@
       const badge = document.createElement('span');
       badge.id = 'sb-notif';
       badge.className = 'sb-notif';
-      badge.innerHTML = '<span class="sb-bell">🔔</span>';
+      badge.innerHTML = '<span class="sb-bell"><os-icon name="bell" size="15"></os-icon></span>';
       const dot = document.createElement('os-badge');
       dot.id = 'sb-bell-dot';
       dot.setAttribute('count', '0');
@@ -96,9 +96,9 @@
       const last = OS.storage.get('notif:demo', 0);
       if (now - last < 60000) return;
       OS.storage.set('notif:demo', now);
-      this.post({ icon: '📶', title: '系统更新完成', text: 'nsos 0.1.0 已就绪，开机画面已焕新', app: 'system' });
-      this.post({ icon: '💬', title: '通知中心上线', text: '下拉状态栏查看通知与快捷开关', app: 'system' });
-      this.post({ icon: '🔔', title: '欢迎使用 nsos', text: '上滑返回桌面 · 边缘滑动返回', app: 'system' });
+      this.post({ icon: 'wifi', title: '系统更新完成', text: 'nsos 0.1.0 已就绪，开机画面已焕新', app: 'system' });
+      this.post({ icon: 'messages', title: '通知中心上线', text: '下拉状态栏查看通知与快捷开关', app: 'system' });
+      this.post({ icon: 'bell', title: '欢迎使用 nsos', text: '上滑返回桌面 · 边缘滑动返回', app: 'system' });
     }
   });
 })(window);
