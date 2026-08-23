@@ -193,7 +193,33 @@
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         this._navHistory(1);
+        return;
       }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        e.stopPropagation();
+        this._complete();
+      }
+    }
+
+    _complete() {
+      const cur = this._inputText();
+      const sh = window.OS && window.OS.shell;
+      if (!sh || !sh.complete) return;
+      const cands = sh.complete(cur);
+      if (!cands.length) return;
+      if (cands.length === 1) {
+        const isCmd = cur.split(/\s+/).length <= 1 && cur.indexOf('/') < 0 && cur.indexOf(' ') < 0;
+        if (isCmd) {
+          this._setInput(cands[0] + ' ');
+        } else {
+          const words = cur.trimEnd().split(/\s+/);
+          words[words.length - 1] = cands[0];
+          this._setInput(words.join(' '));
+        }
+        return;
+      }
+      this._addLine({ text: cands.join('    '), kind: 'sys' });
     }
 
     _navHistory(dir) {
