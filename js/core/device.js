@@ -30,10 +30,24 @@
 
     /* 解析 UA 得到尽量可读的"型号" */
     _parseModel(ua) {
+      // 返回结构恒含 model 键；取不到真实值时报告 "不可用"，不伪造。
       const uaData = navigator.userAgentData;
       if (uaData && uaData.getHighEntropyValues) {
-        // 高熵信息为异步、可能被拒，先取低熵的 platform + mobile
-        return { platform: uaData.platform || 'unknown', mobile: !!uaData.mobile };
+        // UA-CH 低熵：platform 恒可用；型号不请求高熵（可能被隐私策略拒绝），
+        // 透明降级为 UA 正则提取的真实值或已知平台可读名。
+        let model = '不可用';
+        const m = /Android [\d.]+; ([^;)]+)/.exec(ua);
+        if (m) {
+          model = m[1].trim();
+        } else {
+          const p = String(uaData.platform || '').toLowerCase();
+          if (/win/i.test(p)) model = 'Windows PC';
+          else if (/mac/i.test(p)) model = 'Mac';
+          else if (/linux/i.test(p)) model = 'Linux PC';
+          else if (/android/i.test(p)) model = 'Android Device';
+          else if (/ios|iphone|ipad/i.test(p)) model = 'iOS Device';
+        }
+        return { platform: uaData.platform || 'unknown', mobile: !!uaData.mobile, model };
       }
       const low = new RegExp('; (' + [
         'Android [\\d.]+; [^;)]+',
@@ -45,10 +59,11 @@
       ].join('|') + ')', 'i').exec(ua);
       const raw = low ? low[1] : ua.split(')')[0];
       // Android 例子：Android 14; Pixel 8
-      let model = raw;
+      let model = '不可用';
+      if (raw && raw !== ua.split(')')[0]) model = raw;
       const m = /Android [\d.]+; ([^;)]+)/.exec(ua);
       if (m) model = m[1].trim();
-      return { platform: raw, mobile: /Mobile|iPhone|iPad|Android/.test(ua) };
+      return { platform: raw, mobile: /Mobile|iPhone|iPad|Android/.test(ua), model };
     },
 
     async _readBattery() {
@@ -97,6 +112,10 @@
       this.info = {
         battery: batteryTxt,
         charging: chargingTxt,
+        // 诊断字段：区分"浏览器不支持 Battery API"与"支持但获取失败"，便于排查
+        batteryAPI: (typeof navigator.getBattery === 'function')
+          ? (this.batterySupported && this.battery ? '支持' : '支持但获取失败/被拒绝')
+          : '不可用（浏览器未提供 Battery Status API）',
         model: parsed.model,
         platform: parsed.platform,
         osBrowser: ua.split(')')[0].split('(')[1] || '不可用',
