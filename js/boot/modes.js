@@ -18,8 +18,9 @@
         { label: '正常启动系统',           action: 'reboot-system' },
         { label: '重启到 Bootloader',     action: 'restart-bootloader' },
         { label: '启动 Recovery',         action: 'enter-recovery' },
-        { label: '解锁 Bootloader',       action: 'unlock-bootloader' },
         { label: '查看设备信息',          action: 'device-info' },
+        { label: '解锁 / 锁定 Bootloader', action: 'lock-bootloader' },
+        { label: '命令行 (Shell)',        action: 'shell-cli' },
         { label: '关机',                 action: 'power-off' }
       ]
     },
@@ -37,6 +38,7 @@
         { label: '挂载 /system',         action: 'mount-system' },
         { label: '查看恢复日志',          action: 'show-log' },
         { label: '运行图形测试',          action: 'graphics-test' },
+        { label: '命令行 (Shell)',        action: 'shell-cli' },
         { label: '关机',                 action: 'power-off' }
       ]
     }
@@ -67,6 +69,8 @@
       this._closePanel();
       this._cleanupUpdate();
       this.confirmPending = false;
+      // 取消可能仍在进行的传输会话（统一进度源的强制清理）
+      if (OS.shell && OS.shell.updater) OS.shell.updater.cancel();
     },
 
     _open(mode) {
@@ -78,12 +82,25 @@
       this.move(0);
     },
 
+    /* 动态菜单文案：随状态更新（挂载 /system、Bootloader 锁定） */
+    _itemLabel(item) {
+      if (item.action === 'mount-system') {
+        return this.mounted ? '卸载 /system' : '挂载 /system';
+      }
+      if (item.action === 'lock-bootloader') {
+        if (OS.shell && OS.shell.locked) {
+          return OS.shell.locked() ? '解锁 Bootloader' : '锁定 Bootloader';
+        }
+      }
+      return item.label;
+    },
+
     _render() {
       if (!this.menu) return;
       this.menu.innerHTML = '';
       CONFIG[this.mode].items.forEach((item, i) => {
         const li = document.createElement('li');
-        li.textContent = (item.action === 'mount-system' && this.mounted) ? '卸载 /system' : item.label;
+        li.textContent = this._itemLabel(item);
         li.dataset.action = item.action;
         li.addEventListener('click', () => { this.move(i); this.choose(); });
         this.menu.appendChild(li);
@@ -102,6 +119,9 @@
       const st = OS.state.current;
       if (st !== 'fastboot' && st !== 'recovery') return;
       if (e.type === 'back') { this._closePanel(); return; }
+      // 信息面板 / 更新弹层 / 内嵌终端打开时，菜单操作全部忽略，
+      // 否则终端里敲 Enter 会误触隐藏菜单（终端底层交互的守卫）
+      if (this.panel || this.updateWrap) return;
       if (e.type === 'nav') this.move(this.index + (e.dir === 'down' ? 1 : -1));
       else if (e.type === 'select') this.choose();
       else if (e.type === 'digit') { this.move(e.digit - 1); this.choose(); }
@@ -112,14 +132,11 @@
       if (!item) return;
 
       const action = item.dataset.action;
-      // 清除出厂 / 解锁 Bootloader 的二次确认
-      if ((this.mode === 'recovery' && action === 'factory-reset') ||
-          (this.mode === 'fastboot' && action === 'unlock-bootloader')) {
+      // 清除出厂的二次确认
+      if (this.mode === 'recovery' && action === 'factory-reset') {
         if (!this.confirmPending) {
           this.confirmPending = true;
-          item.textContent = action === 'factory-reset'
-            ? '再次确认：立即清除数据？(Enter)'
-            : '再次确认：解锁会清空数据？(Enter)';
+          item.textContent = '再次确认：立即清除数据？(Enter)';
           return;
         }
         this.confirmPending = false;
@@ -129,26 +146,49 @@
 
     exec(action) {
       switch (action) {
+        /* 以下动作统一由 OS.shell 命令引擎驱动（终端底层） */
         case 'reboot-system':
-          OS.state.transition('boot', { source: action });
+          OS.shell.exec('reboot');
           break;
         case 'restart-bootloader':
-          OS.state.transition('boot', { source: action, stayBootloader: true });
+          OS.shell.exec('reboot bootloader');
           break;
         case 'enter-recovery':
-          OS.state.transition('recovery', { source: action });
+          OS.shell.exec('reboot recovery');
           break;
         case 'enter-fastboot':
-          OS.state.transition('fastboot', { source: action });
+          OS.shell.exec('reboot fastboot');
           break;
-        case 'unlock-bootloader':
-          this._toast('Bootloader 已解锁（模拟）· 数据已清除', 'success');
+        case 'power-off':
+          OS.shell.exec('poweroff');
           break;
         case 'device-info':
-          this._openPanel('设备信息', this._deviceInfoHTML());
+          this._openPanel('设备信息', '<div class="ft-panel-log" data-devrows></div>');
+          OS.shell.exec('devinfo', {
+            onLine: (l) => {
+              const box = this.panel && this.panel.querySelector('[data-devrows]');
+              if (!box) return;
+              const row = document.createElement('div');
+              row.className = 'ft-panel-row';
+              const idx = l.text.indexOf(':');
+              if (idx > -1) {
+                row.innerHTML = '<span>' + l.text.slice(0, idx).trim() + '</span><b>' +
+                  l.text.slice(idx + 1).trim() + '</b>';
+              } else {
+                row.textContent = l.text;
+              }
+              box.appendChild(row);
+            }
+          });
+          break;
+        case 'lock-bootloader':
+          this._toggleLock();
+          break;
+        case 'shell-cli':
+          this._openShell();
           break;
         case 'sideload':
-          this._startUpdate('adb sideload', this._sideloadHTML());
+          this._startUpdate('adb sideload update.zip', this._sideloadHTML());
           break;
         case 'apply-from-storage':
           this._openPanel('选择更新包（内部存储）', this._storageListHTML());
@@ -168,15 +208,36 @@
         case 'graphics-test':
           this._openPanel('图形测试', this._graphicsHTML());
           break;
-        case 'power-off':
-          OS.state.transition('poweroff', { source: action });
-          break;
         case 'factory-reset':
           this._resetDone();
           break;
         default:
           console.warn('[modes] unknown action:', action);
       }
+    },
+
+    /* 解锁 / 锁定 Bootloader：由 shell 命令真实持久化状态 */
+    _toggleLock() {
+      const shell = OS.shell;
+      if (!shell) return;
+      const wasLocked = shell.locked();
+      // 执行对应命令（unlock 走 fastboot flashing unlock，确保命令上下文一致）
+      const cmd = wasLocked ? 'fastboot flashing unlock' : 'fastboot flashing lock';
+      shell.exec(cmd, {
+        onLine: (l) => this._toast(l.text, l.kind === 'err' ? 'error' : (l.kind === 'warn' ? 'warning' : 'info'))
+      }).then(() => {
+        this._render(); // 刷新菜单文案（解锁/锁定状态已变）
+        this._toast(wasLocked ? 'Bootloader 已解锁，可刷写任意镜像' : 'Bootloader 已锁定', 'success');
+      });
+    },
+
+    /* 内嵌命令终端：工程模式里的底层命令行交互 */
+    _openShell() {
+      this._openPanel('命令行 (Shell)', '<os-terminal></os-terminal>');
+      setTimeout(() => {
+        const t = this.panel && this.panel.querySelector('os-terminal');
+        if (t) { try { t.focus(); } catch (e) {} }
+      }, 60);
     },
 
     /* ---- 信息面板 ---- */
@@ -209,14 +270,22 @@
     },
 
     _deviceInfoHTML() {
+      const d = (OS.device && OS.device.info) || {};
       const rows = [
-        ['型号', 'NSOS Simulator 1.0'],
-        ['序列号', 'NSOS' + Math.random().toString(36).slice(2, 8).toUpperCase()],
-        ['Bootloader 版本', 'nsos-bl-0.1.0'],
-        ['电量', '100 %'],
-        ['解锁状态', 'unlocked（模拟）'],
-        ['存储', '256 GB / 已用 38 GB'],
-        ['显示', '1080 x 2340 @ 420dpi']
+        ['型号', d.model || '不可用'],
+        ['平台', d.platform || '不可用'],
+        ['浏览器/系统', d.osBrowser || '不可用'],
+        ['电量', d.battery || '不可用'],
+        ['充电状态', d.charging || '不可用'],
+        ['屏幕', d.screen || '不可用'],
+        ['DPI', d.dpr || '不可用'],
+        ['内存', d.memory || '不可用'],
+        ['CPU 核心数', d.cores || '不可用'],
+        ['网络类型', d.network || '不可用'],
+        ['网络状态', d.online || '不可用'],
+        ['触屏', d.touch || '不可用'],
+        ['语言', d.language || '不可用'],
+        ['存储使用', d.storage || '不可用']
       ];
       return rows.map(r => '<div class="ft-panel-row"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>').join('');
     },
@@ -263,6 +332,7 @@
     },
 
     /* ---- 更新进度弹层 ---- */
+    /* 进度源来自 OS.shell.updater（全局唯一），终端 sideload 与菜单更新共用同一计时器 */
     _startUpdate(cmdLabel, bodyHTML) {
       this._cleanupUpdate();
       const layer = document.getElementById(CONFIG[this.mode].layer);
@@ -276,20 +346,23 @@
 
       const bar = wrap.querySelector('.ft-update-bar');
       const pct = wrap.querySelector('.ft-update-pct');
-      let p = 0;
-      this.updateTimer = setInterval(() => {
-        p += 3 + Math.floor(Math.random() * 6);
-        if (p >= 100) {
-          p = 100;
-          clearInterval(this.updateTimer);
-          this.updateTimer = null;
-          wrap.querySelector('.ft-update-title').textContent = '更新完成';
-          wrap.querySelector('.ft-update-cmd').textContent = '正在重启系统…';
-          setTimeout(() => OS.state.transition('boot', { source: 'update-done' }), 1200);
-        }
+      const u = OS.shell.updater.start(cmdLabel);
+      if (u.error) {
+        this._toast(u.error, 'error');
+        this._cleanupUpdate();
+        return;
+      }
+      u.onTick((p) => {
         bar.style.width = p + '%';
         pct.textContent = p + '%';
-      }, 180);
+      });
+      u.onDone(() => {
+        bar.style.width = '100%';
+        pct.textContent = '100%';
+        wrap.querySelector('.ft-update-title').textContent = '更新完成';
+        wrap.querySelector('.ft-update-cmd').textContent = '正在重启系统…';
+        setTimeout(() => OS.state.transition('boot', { source: 'update-done' }), 1200);
+      });
     },
 
     _progressHTML(fileName) {
