@@ -241,3 +241,116 @@
 }
 .poweroff-wrap { text-align: center; color: var(--os-fg-1); font-size: 16px; }
 .poweroff-hint { margin-top: 14px; font-size: 12px; color: var(--os-fg-2); letter-spacing: 1px; }
+
+/* ---------- 工程模式扩展面板（设备信息/日志/图形测试/更新） ---------- */
+.ft-panel,
+.ft-update {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, .94);
+  padding: 34px 30px;
+  font-family: "SF Mono", Consolas, "Courier New", monospace;
+  color: #cfd6cf;
+  animation: ft-fade .18s ease-out;
+}
+@keyframes ft-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.ft-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 15px;
+  letter-spacing: 1px;
+  color: #9be79b;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, .12);
+}
+#layer-recovery .ft-panel-head { color: #ffb3b3; }
+
+.ft-panel-close {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, .35);
+  color: #cfd6cf;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--os-dur-fast);
+}
+.ft-panel-close:hover { border-color: #fff; color: #fff; }
+
+.ft-panel-body { margin-top: 18px; overflow-y: auto; flex: 1; }
+
+.ft-panel-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 13px 4px;
+  border-bottom: 1px dashed rgba(255, 255, 255, .12);
+  font-size: 13px;
+}
+.ft-panel-row span { color: #8a938a; }
+.ft-panel-row b { color: #e8efe8; font-weight: 600; }
+
+.ft-panel-log {
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 2;
+  color: #9be79b;
+  white-space: pre-wrap;
+}
+
+.ft-file {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 16px 12px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #cfd6cf;
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all var(--os-dur-fast);
+}
+.ft-file:hover { border-color: #9be79b; color: #9be79b; transform: translateX(4px); }
+
+/* 图形测试 */
+.ft-panel-gfx { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.gfx-bar {
+  height: 90px;
+  border-radius: 10px;
+  animation: gfx-pulse 1.6s ease-in-out infinite alternate;
+}
+.g0 { background: linear-gradient(135deg, #ff5f6d, #ffc371); }
+.g1 { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+.g2 { background: linear-gradient(135deg, #fa709a, #fee140); }
+.g3 { background: linear-gradient(135deg, #30cfd0, #330867); }
+@keyframes gfx-pulse { from { transform: scale(1); opacity: .7; } to { transform: scale(1.04); opacity: 1; } }
+.gfx-msg { grid-column: 1 / -1; text-align: center; font-size: 13px; color: #9be79b; margin-top: 8px; }
+
+/* 更新进度 */
+.ft-update { justify-content: center; align-items: center; text-align: center; }
+.ft-update-title { font-size: 17px; letter-spacing: 2px; color: #e8efe8; margin-bottom: 10px; }
+.ft-update-cmd { font-size: 12px; color: #8a938a; margin-bottom: 4px; }
+.ft-update-file { font-size: 13px; color: #9be79b; margin-bottom: 26px; }
+.ft-update-track {
+  width: 78%;
+  height: 10px;
+  background: rgba(255, 255, 255, .12);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.ft-update-bar {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #43e97b, #38f9d7);
+  border-radius: 999px;
+  transition: width .18s linear;
+}
+.ft-update-pct { margin-top: 14px; font-size: 14px; color: #e8efe8; letter-spacing: 1px; }
