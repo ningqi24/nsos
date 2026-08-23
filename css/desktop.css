@@ -63,8 +63,8 @@
 #layer-locked {
   justify-content: flex-end;
   background:
-    radial-gradient(circle at 78% 18%, rgba(147,197,253,.28), transparent 46%),
-    linear-gradient(165deg, #2b2f6b 0%, #0f1730 52%, #05060f 100%);
+    radial-gradient(circle at 78% 12%, rgba(239,159,55,.08), transparent 52%),
+    var(--os-bg-0);
 }
 .lock-content {
   position: relative;
@@ -95,9 +95,9 @@
 /* ---------- Launcher 桌面 ---------- */
 #layer-home {
   background:
-    radial-gradient(circle at 20% 24%, rgba(59,130,246,.32), transparent 42%),
-    radial-gradient(circle at 82% 68%, rgba(168,85,247,.22), transparent 44%),
-    linear-gradient(168deg, #1c2440 0%, #101426 55%, #0a0c18 100%);
+    radial-gradient(circle at 50% 22%, rgba(53,196,162,.06), transparent 46%),
+    radial-gradient(circle at 78% 78%, rgba(239,159,55,.07), transparent 42%),
+    var(--os-bg-1);
 }
 .launcher {
   position: absolute;
@@ -141,13 +141,13 @@
   color: #fff;
   text-shadow: 0 1px 3px rgba(0,0,0,.5);
 }
-/* 图标配色 */
-.ic-blue   { background: linear-gradient(145deg, #60a5fa, #2563eb); }
-.ic-purple { background: linear-gradient(145deg, #c084fc, #7c3aed); }
-.ic-green  { background: linear-gradient(145deg, #4ade80, #16a34a); }
-.ic-orange { background: linear-gradient(145deg, #fbbf24, #ea580c); }
-.ic-red    { background: linear-gradient(145deg, #f87171, #dc2626); }
-.ic-cyan   { background: linear-gradient(145deg, #22d3ee, #0891b2); }
+/* 图标纯色块（flat，无渐变） */
+.ic-blue   { background: #3d7bff; }
+.ic-purple { background: #8f5bff; }
+.ic-green  { background: #2fbf71; }
+.ic-orange { background: #ef9f37; }
+.ic-red    { background: #f2574c; }
+.ic-cyan   { background: #21b6b0; }
 
 /* Dock */
 .launcher-dock {
@@ -197,7 +197,7 @@
   align-items: center;
   justify-content: center;
   display: none;
-  box-shadow: 0 0 6px rgba(59,130,246,.6);
+  box-shadow: 0 0 6px rgba(239,159,55,.6);
 }
 
 /* ---------- 控制中心面板 ---------- */
@@ -210,7 +210,7 @@
   opacity: 0;
   pointer-events: none;
   transition: transform var(--os-dur-norm) var(--os-ease-out), opacity var(--os-dur-norm) var(--os-ease-out);
-  background: linear-gradient(180deg, rgba(20,22,32,.92) 0%, rgba(10,12,20,.86) 100%);
+  background: rgba(15,19,27,.9);
   backdrop-filter: blur(26px) saturate(140%);
   -webkit-backdrop-filter: blur(26px) saturate(140%);
   border-bottom: 1px solid rgba(255,255,255,.1);
@@ -243,11 +243,11 @@
 .cc-tog .tog-nm { font-size: 11px; }
 .cc-tog.on {
   color: #fff;
-  background: rgba(59,130,246,.24);
-  border-color: rgba(59,130,246,.5);
+  background: var(--os-accent-soft);
+  border-color: rgba(239,159,55,.45);
 }
 .cc-tog.on .tog-ic { filter: none; }
-.cc-tog.on .tog-ic os-icon { color: #93c5fd; }
+.cc-tog.on .tog-ic os-icon { color: var(--os-accent-strong); }
 .cc-tog .cc-sw { margin-top: 4px; transform: scale(.82); transform-origin: center bottom; }
 .cc-tog os-slider { margin-top: 6px; }
 .cc-sliders {
