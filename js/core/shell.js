@@ -21,7 +21,25 @@
     _outputListeners: new Set(),
     updater: null, // 见下方定义
 
-    line(text, kind) { return { text: String(text), kind: kind || K.out }; },
+    // 环境变量（真实持久化到 OS.storage，export/unset 可改）
+    env: Object.assign({
+      PATH: '/bin:/sbin',
+      HOME: '/sdcard/Documents',
+      USER: 'root',
+      SHELL: '/bin/sh',
+      TERM: 'xterm-256color'
+    }, (function () {
+      try { return (OS.storage && OS.storage.get('env', {})) || {}; } catch (e) { return {}; }
+    })()),
+    _saveEnv() {
+      try { if (OS.storage) OS.storage.set('env', this.env); } catch (e) { /* 忽略 */ }
+    },
+    _hist: [], // 会话命令历史（history 命令读取）
+    line(text, kind) {
+      const o = { text: String(text), kind: kind || K.out };
+      o.toString = () => o.text;
+      return o;
+    },
 
     /* ---------- 注册命令 ----------
      * def: { name, aliases:[], desc, usage, run(ctx) }
@@ -50,6 +68,7 @@
     },
 
     /* ---------- 执行一行命令 ----------
+     * 支持：管道 | 重定向 > >> 后台 & 环境变量 $VAR 展开 相对路径(cwd)
      * hooks.onLine(line) 实时收到输出行（供 streaming UI 增量渲染）
      */
     async exec(input, hooks) {
@@ -62,35 +81,201 @@
         return ll;
       };
 
-      const raw = (input || '').trim();
-      const args = this.parse(raw);
-      const ctx = {
-        args, raw,
-        shell: this,
-        push,
-        line: (text, kind) => this.line(text, kind)
+      let raw = (input || '').trim();
+      if (!raw) return { code: 0, lines };
+      this._hist.push(raw);
+      if (this._hist.length > 200) this._hist.shift();
+
+      // 后台任务（& 结尾）
+      if (/&+\s*$/.test(raw)) {
+        const body = raw.replace(/&+\s*$/, '').trim();
+        if (body) {
+          this._runBackground(body, (l) => { push(l); onLine(l); });
+          return { code: 0, lines };
+        }
+      }
+
+      // 管道分段
+      const segs = this._splitPipe(raw);
+      let stdin = null;
+      let exitCode = 0;
+
+      for (let si = 0; si < segs.length; si++) {
+        const seg = segs[si];
+        if (!seg) continue;
+        const isLast = si === segs.length - 1;
+        const args = this.parse(this._expandEnv(seg));
+        if (args.length === 0) continue;
+        const redir = this._extractRedirect(args);
+        if (redir.args.length === 0) continue;
+
+        const segLines = [];
+        const pctx = {
+          args: redir.args, raw: seg, shell: this, stdin,
+          cwd: () => this._cwd,
+          push: (l) => {
+            const ll = (typeof l === 'string') ? this.line(l) : l;
+            String(ll.text).split('\n').forEach((p, i, arr) => {
+              if (p === '' && i === arr.length - 1) return; // 末尾换行不产生空行
+              segLines.push(this.line(p, ll.kind || K.out));
+            });
+            return ll;
+          },
+          line: (t, k) => this.line(t, k)
+        };
+
+        const name = redir.args[0].toLowerCase();
+        const def = this.cmds.get(name);
+        if (!def) {
+          const ll = this.line(`sh: ${name}: command not found`, K.err);
+          if (isLast && !redir.out.length && !redir.app.length) push(ll);
+          exitCode = 127;
+          continue;
+        }
+
+        try {
+          const ret = await def.run(pctx);
+          if (ret !== undefined && ret !== null) {
+            const arr = Array.isArray(ret) ? ret : [ret];
+            arr.forEach(l => pctx.push(l));
+          }
+        } catch (e) {
+          const ll = this.line(`sh: ${name}: ${(e && e.message) || e}`, K.err);
+          if (isLast) push(ll);
+          exitCode = 1;
+          continue;
+        }
+
+        // 重定向写文件（不显示到 stdout）
+        if (redir.out.length || redir.app.length) {
+          const text = segLines.map(l => l.text).join('\n') + (segLines.length ? '\n' : '');
+          redir.out.forEach(t => this.VFS._writeFile(this._resolvePath(t), text, false));
+          redir.app.forEach(t => this.VFS._writeFile(this._resolvePath(t), text, true));
+        } else if (isLast) {
+          segLines.forEach(l => push(l));
+        }
+
+        // stdout 传递给下段（stdin）
+        stdin = segLines.map(l => l.text);
+      }
+
+      if (!lines.length && stdin !== null && stdin.length && !segs.length) { /* noop */ }
+      return { code: exitCode, lines };
+    },
+
+    /* 按管道符分割（忽略引号内） */
+    _splitPipe(line) {
+      const parts = [];
+      let cur = '', quote = null;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (quote) {
+          cur += ch;
+          if (ch === quote) quote = null;
+        } else if (ch === '"' || ch === "'") {
+          quote = ch; cur += ch;
+        } else if (ch === '|') {
+          parts.push(cur); cur = '';
+        } else {
+          cur += ch;
+        }
+      }
+      parts.push(cur);
+      return parts.map(s => s.trim()).filter(Boolean);
+    },
+
+    /* 展开 $VAR / ${VAR}（环境变量） */
+    _expandEnv(text) {
+      return text.replace(/\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?/g, (m, name) => {
+        if (this.env[name] !== undefined) return this.env[name];
+        if (name === 'PWD') return this._cwd;
+        return ''; // 未定义变量展开为空串（符合 POSIX）
+      });
+    },
+
+    /* 提取重定向 > >> （从 args 尾部/任意处剥离目标） */
+    _extractRedirect(args) {
+      const rest = [];
+      const out = [], app = [];
+      let i = 0;
+      while (i < args.length) {
+        const t = args[i];
+        if (t === '>' || t === '>>') {
+          const target = args[i + 1];
+          if (target === undefined) { rest.push(t); i++; break; }
+          (t === '>' ? out : app).push(target);
+          i += 2;
+        } else {
+          rest.push(t);
+          i += 1;
+        }
+      }
+      return { args: rest, out, app };
+    },
+
+    /* 当前工作目录 */
+    _cwd: '/',
+
+    /* 绝对路径化 + 规范化（支持 .. . ~） */
+    _resolvePath(p) {
+      let path = (p || '/').trim() || '/';
+      if (path === '~') path = this.env.HOME || '/sdcard/Documents';
+      if (path[0] !== '/') path = (this._cwd === '/' ? '' : this._cwd) + '/' + path;
+      const parts = [];
+      path.split('/').forEach(seg => {
+        if (!seg || seg === '.') return;
+        if (seg === '..') parts.pop();
+        else parts.push(seg);
+      });
+      return '/' + parts.join('/');
+    },
+
+    /* ---------- 后台任务（& / jobs / kill / wait / ps） ---------- */
+    _bgNext: 1,
+    _bgJobs: new Map(),
+
+    _runBackground(command, onLine) {
+      const job = {
+        pid: this._bgNext++,
+        cmd: command,
+        state: 'running',       // running | done | killed
+        ts: Date.now(),
+        output: [],
+        _sleepTimers: new Set()
       };
+      this._bgJobs.set(job.pid, job);
+      if (onLine) onLine(this.line(`[${job.pid}] ${command} &`, K.sys));
+      (async () => {
+        try {
+          const ctx2 = {
+            job,
+            consumeSleep(t) { job._sleepTimers.add(t); return job; }
+          };
+          const res = await this.exec(command, {
+            onLine: (l) => {
+              job.output.push(l);
+              if (job.killed || job.state === 'killed') return;
+              if (onLine && onLine._bg !== false) onLine(l);
+            }
+          });
+          if (job.state === 'killed') return;
+          job.state = 'done';
+          if (onLine) onLine(this.line(`[${job.pid}] done (exit ${res.code})`, K.sys));
+        } catch (e) {
+          job.state = 'done';
+          if (onLine) onLine(this.line(`[${job.pid}] finished with error`, K.err));
+        }
+      })();
+      return job;
+    },
 
-      if (args.length === 0) return { code: 0, lines };
-
-      const name = args[0].toLowerCase();
-      const def = this.cmds.get(name);
-      if (!def) {
-        push(this.line(`sh: ${name}: command not found`, K.err));
-        push(this.line('试试 help 查看可用命令。', K.out));
-        return { code: 127, lines };
-      }
-
-      try {
-        const ret = await def.run(ctx);
-        if (ret === undefined || ret === null) return { code: 0, lines };
-        const arr = Array.isArray(ret) ? ret : [ret];
-        arr.forEach(l => push(l));
-        return { code: 0, lines };
-      } catch (e) {
-        push(this.line(`sh: ${name}: ${(e && e.message) || e}`, K.err));
-        return { code: 1, lines };
-      }
+    _killJob(pid, sig /* unused */) {
+      const job = this._bgJobs.get(pid);
+      if (!job) return false;
+      job.state = 'killed';
+      job._sleepTimers.forEach(t => clearTimeout(t));
+      job._sleepTimers.clear();
+      return true;
     },
 
     /* ---------- 输出订阅（工程模式面板等可复用） ---------- */
@@ -242,9 +427,13 @@
 
   SHELL.register({
     name: 'echo',
-    desc: '回显文本',
-    usage: 'echo <text>',
-    run(ctx) { ctx.push(ctx.line(ctx.args.slice(1).join(' '), K.out)); }
+    desc: '回显文本（-n 不换行）',
+    usage: 'echo [-n] <text>',
+    run(ctx) {
+      const noNl = ctx.args[1] === '-n';
+      const body = ctx.args.slice(noNl ? 2 : 1).join(' ');
+      ctx.push(ctx.line(noNl ? body : body, K.out));
+    }
   });
 
   SHELL.register({
@@ -309,6 +498,34 @@
 
   const VFS = {
     mount: { '/': true, '/proc': true, '/sdcard': true, '/system': false, '/cache': false },
+
+    // 用户可写文件（路径 → { content, mode, mtime }），touch/echo>/cp/mv 真实落此
+    userFiles: Object.create(null),
+    // 用户新建目录（路径 → true），mkdir 真实创建
+    userDirs: Object.create(null),
+    _loads: 0, // 本次会话已从持久化恢复的次数
+
+    _loadPersisted() {
+      if (this._loads) return;
+      this._loads = 1;
+      try {
+        const snap = OS.storage && OS.storage.get('vfs', null);
+        if (snap && snap.files) {
+          this.userFiles = Object.create(null);
+          Object.keys(snap.files).forEach(k => { this.userFiles[k] = snap.files[k]; });
+          if (snap.dirs) { this.userDirs = Object.create(null); snap.dirs.forEach(d => { this.userDirs[d] = true; }); }
+        }
+      } catch (e) { /* 忽略 */ }
+    },
+    _persist() {
+      try {
+        if (!OS.storage) return;
+        const files = {};
+        Object.keys(this.userFiles).forEach(k => { files[k] = this.userFiles[k]; });
+        OS.storage.set('vfs', { files, dirs: Object.keys(this.userDirs) });
+      } catch (e) { /* 忽略 */ }
+    },
+
     cache: { used: 0, entries: 0, primed: false }, // /cache 占用（可被 wipe cache 真实清空）
     // 进入 recovery 时给 /cache 注入真实存在的缓存数据（来自系统运行期累积）
     primeCache() {
@@ -359,10 +576,126 @@
       },
       '/cache/recovery.log': () => (REC.lines.length ? REC.lines.join('\n') : '(empty)')
     },
-    resolve(p) {
-      const path = (p || '/').replace(/\/+$/, '') || '/';
-      return path;
+
+    // 目录项（合并静态 tree + 用户文件 + 用户目录）
+    _listDir(path) {
+      const names = {};
+      (this.tree[path] || []).forEach(en => { names[en] = (en.endsWith('/') ? 'dir' : 'static'); });
+      const prefix = path === '/' ? '/' : path + '/';
+      Object.keys(this.userFiles).forEach(p => {
+        if (p.indexOf(prefix) !== 0) return;
+        const rest = p.slice(prefix.length);
+        const seg = rest.split('/')[0];
+        if (rest.indexOf('/') === -1) names[seg] = 'file';
+        else names[seg + '/'] = 'dir';
+      });
+      Object.keys(this.userDirs).forEach(p => {
+        if (p.indexOf(prefix) !== 0) return;
+        const rest = p.slice(prefix.length);
+        const seg = rest.split('/')[0];
+        if (rest.indexOf('/') === -1) names[seg + '/'] = 'dir';
+      });
+      return Object.keys(names).sort();
     },
+
+    /* 写文件（真实写入 userFiles，:: 追加用 append） */
+    _writeFile(path, content, append) {
+      path = SHELL._resolvePath(path);
+      const mp = this.mountPoint(path);
+      if (mp !== '/' && mp !== '/sdcard') {
+        return { ok: false, err: path + ': Read-only file system' };
+      }
+      if (this.files[path] || this.tree[path]) {
+        return { ok: false, err: path + ': Read-only file system' };
+      }
+      if (this.userDirs[path]) {
+        return { ok: false, err: path + ': Is a directory' };
+      }
+      const prev = this.userFiles[path];
+      this.userFiles[path] = {
+        content: append && prev ? prev.content + String(content) : String(content),
+        mode: prev ? prev.mode : 'rw-r--r--',
+        mtime: Date.now()
+      };
+      // 保证父目录存在（用户文件系统的父目录自动建立）
+      const parts = path.split('/');
+      parts.pop();
+      let cur = '';
+      parts.forEach(seg => {
+        if (!seg) return;
+        cur += '/' + seg;
+        if (cur !== path && cur !== '/' && this.mountPoint(cur) !== '/sdcard') this.userDirs[cur] = true;
+      });
+      this._persist();
+      return { ok: true, path };
+    },
+
+    _mkdir(path) {
+      path = SHELL._resolvePath(path);
+      const mp = this.mountPoint(path);
+      if (mp !== '/' && mp !== '/sdcard') return { ok: false, err: path + ': Read-only file system' };
+      if (this.tree[path] || this.files[path]) return { ok: false, err: `mkdir: ${path}: File exists` };
+      if (this.userFiles[path]) return { ok: false, err: `mkdir: ${path}: File exists` };
+      this.userDirs[path] = true;
+      this._persist();
+      return { ok: true, path };
+    },
+
+    _rmdir(path) {
+      path = SHELL._resolvePath(path);
+      if (this.tree[path]) return { ok: false, err: `rmdir: ${path}: Permission denied` };
+      if (!this.userDirs[path]) return { ok: false, err: `rmdir: ${path}: No such file or directory` };
+      const kids = this._listDir(path);
+      if (kids.length) return { ok: false, err: `rmdir: ${path}: Directory not empty` };
+      delete this.userDirs[path];
+      this._persist();
+      return { ok: true, path };
+    },
+
+    _rm(path, recursive) {
+      path = SHELL._resolvePath(path);
+      if (path === '/' || path === '/sdcard' || path === '/proc' || path === '/cache' || path === '/system') {
+        return { ok: false, err: `rm: ${path}: cannot remove (system mount)` };
+      }
+      if (this.tree[path] || this.files[path]) return { ok: false, err: `rm: ${path}: Read-only file system` };
+      const locked = this.userFiles[path];
+      const isDir = !!this.userDirs[path];
+      if (!locked && !isDir) return { ok: false, err: `rm: ${path}: No such file or directory` };
+      if (isDir && !recursive) {
+        const kids = this._listDir(path);
+        if (kids.length) return { ok: false, err: `rm: ${path}: Is a directory (use -r)` };
+      }
+      delete this.userFiles[path];
+      delete this.userDirs[path];
+      if (recursive) {
+        const prefix = path === '/' ? '/' : path + '/';
+        Object.keys(this.userFiles).forEach(p => { if (p.indexOf(prefix) === 0) delete this.userFiles[p]; });
+        Object.keys(this.userDirs).forEach(p => { if (p.indexOf(prefix) === 0) delete this.userDirs[p]; });
+      }
+      this._persist();
+      return { ok: true, path };
+    },
+
+    _readFile(path) {
+      path = SHELL._resolvePath(path);
+      const fn = this.files[path];
+      if (fn) return { ok: true, content: String(fn()) };
+      const uf = this.userFiles[path];
+      if (uf) return { ok: true, content: uf.content, mode: uf.mode, mtime: uf.mtime };
+      if (this.userDirs[path]) return { ok: false, err: path + ': Is a directory' };
+      return { ok: false, err: `cat: ${path}: No such file or directory` };
+    },
+
+    _stat(path) {
+      path = SHELL._resolvePath(path);
+      if (this.tree[path] || this.userDirs[path]) return { dir: true };
+      if (this.files[path]) return { dir: false, mode: 'r--r--r--' };
+      const uf = this.userFiles[path];
+      if (uf) return { dir: false, mode: uf.mode, size: uf.content.length, mtime: uf.mtime };
+      return null;
+    },
+
+    resolve(p) { return SHELL._resolvePath(p || '/'); },
     mountPoint(path) {
       if (path === '/system' || path.indexOf('/system/') === 0) return '/system';
       if (path === '/cache' || path.indexOf('/cache/') === 0) return '/cache';
@@ -371,6 +704,7 @@
       return '/';
     }
   };
+  VFS._loadPersisted();
   SHELL.VFS = VFS;
 
   // 分区大小表（真实计算 cache 占用，其余固定）
@@ -380,27 +714,48 @@
 
   SHELL.register({
     name: 'ls',
-    desc: '列出目录内容（/system /proc /sdcard /cache）',
-    usage: 'ls [dir]',
+    desc: '列出目录内容（含 -l 长格式：权限/大小/时间）',
+    usage: 'ls [-l] [dir]',
     run(ctx) {
-      const path = VFS.resolve(ctx.args[1] || '/');
+      const long = ctx.args.includes('-l');
+      const target = ctx.args.slice(1).find(a => a !== '-l');
+      const path = VFS.resolve(target || '.');
       const mp = VFS.mountPoint(path);
       if (mp !== '/' && !VFS.mount[mp]) {
         ctx.push(ctx.line(`ls: ${path}: ${mp} is not mounted`, K.err));
         return;
       }
-      const entries = VFS.tree[path];
-      if (!entries) { ctx.push(ctx.line(`ls: ${path}: No such file or directory`, K.err)); return; }
-      entries.forEach(en => ctx.push(ctx.line(en, K.out)));
+      const st = VFS._stat(path);
+      if (!st) { ctx.push(ctx.line(`ls: ${path}: No such file or directory`, K.err)); return; }
+      if (!st.dir) {
+        const r = VFS._readFile(path);
+        ctx.push(ctx.line((long ? st.mode + '  ' + path + '\n' : '') + (r.ok ? '  ' + path : ''), K.out));
+        return;
+      }
+      const entries = VFS._listDir(path);
+      if (long) {
+        entries.forEach(en => {
+          const full = (path === '/' ? '/' : path + '/') + en.replace(/\/$/, '');
+          const s = VFS._stat(full);
+          if (s && s.dir) { ctx.push(ctx.line('drwxr-xr-x  root     root        0  ' + en, K.out)); return; }
+          const size = s && s.size !== undefined ? s.size : 0;
+          const mode = s ? s.mode : 'rw-r--r--';
+          const mt = s && s.mtime ? new Date(s.mtime).toISOString().replace('T', ' ').slice(0, 19) : '2026-08-23 00:00:00';
+          ctx.push(ctx.line(mode + '  root     root  ' + String(size).padStart(9) + '  ' + mt + '  ' + en, K.out));
+        });
+      } else {
+        entries.forEach(en => ctx.push(ctx.line(en.replace(/\/$/, '/'), K.out)));
+      }
     }
   });
 
   SHELL.register({
     name: 'cat',
-    desc: '读取文件内容',
-    usage: 'cat <file>',
+    desc: '读取文件内容（可带 -n 行号）',
+    usage: 'cat [-n] <file>',
     run(ctx) {
-      const p = ctx.args[1];
+      const num = ctx.args.includes('-n');
+      const p = ctx.args.slice(1).find(a => a !== '-n');
       if (!p) { ctx.push(ctx.line('usage: cat <file>', K.err)); return; }
       const path = VFS.resolve(p);
       const mp = VFS.mountPoint(path);
@@ -408,11 +763,13 @@
         ctx.push(ctx.line(`cat: ${p}: ${mp} is not mounted`, K.err));
         return;
       }
-      const fn = VFS.files[path];
       if (path.endsWith('.zip')) { ctx.push(ctx.line('cat: binary file', K.err)); return; }
-      if (!fn) { ctx.push(ctx.line(`cat: ${p}: No such file or directory`, K.err)); return; }
-      ctx.push(ctx.line(VFS.resolve(p) + ':', K.sys));
-      String(fn()).split('\n').forEach(l => ctx.push(ctx.line(l, K.out)));
+      const r = VFS._readFile(path);
+      if (!r.ok) { ctx.push(ctx.line(r.err, K.err)); return; }
+      const body = String(r.content).split('\n');
+      body.forEach((l, i) => {
+        ctx.push(ctx.line(num ? String(i + 1).padStart(4) + '\t' + l : l, K.out));
+      });
     }
   });
 
@@ -738,6 +1095,631 @@
         ctx.push(ctx.line('usage: adb <devices|reboot|sideload>', K.out));
     }
   };
+
+  /* ==================== 通用工具 ==================== */
+  // 取输入文本行：优先文件参数（cat 语义），否则 stdin（管道）
+  // skipFlags 存在时忽略开关参数，取剩余第一个作为文件
+  function readLines(ctx, fileIndex, skipFlags) {
+    let rel = ctx.args[fileIndex];
+    if (skipFlags && Array.isArray(skipFlags)) {
+      rel = ctx.args.slice(1).find(a => a && !skipFlags.includes(a));
+    }
+    if (rel && rel !== '-') {
+      const r = VFS._readFile(rel);
+      if (r.ok) return { lines: String(r.content).split('\n'), source: rel };
+      ctx.push(ctx.line(r.err, K.err));
+      return { lines: null, source: null };
+    }
+    if (ctx.stdin && ctx.stdin.length) return { lines: ctx.stdin, source: null };
+    return { lines: [], source: null };
+  }
+
+  /* ==================== 目录 / 工作目录 ==================== */
+
+  SHELL.register({
+    name: 'pwd',
+    desc: '显示当前工作目录',
+    usage: 'pwd',
+    run(ctx) { ctx.push(ctx.line(SHELL._cwd, K.out)); }
+  });
+
+  SHELL.register({
+    name: 'cd',
+    desc: '切换工作目录（支持相对路径 / .. / ~）',
+    usage: 'cd [dir]',
+    run(ctx) {
+      const target = ctx.args[1] || SHELL.env.HOME || '/';
+      const path = SHELL._resolvePath(target);
+      const st = VFS._stat(path);
+      if (!st || !st.dir) { ctx.push(ctx.line(`cd: ${target}: No such file or directory`, K.err)); return; }
+      SHELL._cwd = path;
+      SHELL.env.PWD = path;
+    }
+  });
+
+  SHELL.register({
+    name: 'mkdir',
+    desc: '创建目录（-p 级联创建）',
+    usage: 'mkdir [-p] <dir>',
+    run(ctx) {
+      const rec = ctx.args.includes('-p');
+      const d = ctx.args.slice(1).find(a => a !== '-p');
+      if (!d) { ctx.push(ctx.line('usage: mkdir [-p] <dir>', K.err)); return; }
+      const path = SHELL._resolvePath(d);
+      if (rec) {
+        let cur = '/';
+        const segs = path.split('/').filter(Boolean);
+        for (const s of segs) {
+          cur += '/' + s;
+          const st = VFS._stat(cur);
+          if (st && st.dir) continue;
+          if (st) { ctx.push(ctx.line(`mkdir: ${cur}: File exists`, K.err)); return; }
+          VFS._mkdir(cur);
+        }
+      } else {
+        const r = VFS._mkdir(path);
+        if (!r.ok) { ctx.push(ctx.line(r.err, K.err)); return; }
+      }
+      ctx.push(ctx.line('mkdir: created ' + path, K.ok));
+    }
+  });
+
+  SHELL.register({
+    name: 'rmdir',
+    desc: '删除空目录',
+    usage: 'rmdir <dir>',
+    run(ctx) {
+      const d = ctx.args[1];
+      if (!d) { ctx.push(ctx.line('usage: rmdir <dir>', K.err)); return; }
+      const r = VFS._rmdir(SHELL._resolvePath(d));
+      if (!r.ok) { ctx.push(ctx.line(r.err, K.err)); return; }
+      ctx.push(ctx.line('rmdir: removed ' + r.path, K.ok));
+    }
+  });
+
+  SHELL.register({
+    name: 'rm',
+    desc: '删除文件（-r 递归删除目录；真实清空用户文件区）',
+    usage: 'rm [-r] [-f] <path>',
+    run(ctx) {
+      const rec = ctx.args.includes('-r');
+      const force = ctx.args.includes('-f');
+      const targets = ctx.args.slice(1).filter(a => a !== '-r' && a !== '-f' && a !== '--');
+      if (!targets.length) { ctx.push(ctx.line('usage: rm [-r] <path>', K.err)); return; }
+      targets.forEach(t => {
+        const r = VFS._rm(t, rec);
+        if (!r.ok) { if (!force) ctx.push(ctx.line(r.err, K.err)); }
+      });
+    }
+  });
+
+  SHELL.register({
+    name: 'touch',
+    desc: '创建空文件 / 更新时间戳',
+    usage: 'touch <file>',
+    run(ctx) {
+      const p = ctx.args[1];
+      if (!p) { ctx.push(ctx.line('usage: touch <file>', K.err)); return; }
+      const path = SHELL._resolvePath(p);
+      const st = VFS._stat(path);
+      if (st) {
+        if (st.dir) { ctx.push(ctx.line(`touch: ${p}: Is a directory`, K.err)); return; }
+        if (VFS.userFiles[path]) VFS.userFiles[path].mtime = Date.now();
+        else ctx.push(ctx.line(`touch: ${p}: Read-only file system`, K.err));
+        return;
+      }
+      const r = VFS._writeFile(path, '');
+      if (!r.ok) ctx.push(ctx.line(r.err, K.err));
+    }
+  });
+
+  SHELL.register({
+    name: 'cp',
+    desc: '复制文件（-r 递归复制目录）',
+    usage: 'cp [-r] <src> <dst>',
+    run(ctx) {
+      const rec = ctx.args.includes('-r');
+      const names = ctx.args.slice(1).filter(a => a !== '-r');
+      const [src, dst] = names;
+      if (!src || !dst) { ctx.push(ctx.line('usage: cp [-r] <src> <dst>', K.err)); return; }
+      const sp = SHELL._resolvePath(src);
+      const dp = SHELL._resolvePath(dst);
+      const sst = VFS._stat(sp);
+      if (!sst) { ctx.push(ctx.line(`cp: ${src}: No such file or directory`, K.err)); return; }
+      if (sst.dir && !rec) { ctx.push(ctx.line(`cp: ${src}: omitting directory (use -r)`, K.warn)); return; }
+      if (sst.dir) {
+        // 递归复制 userFiles 子树
+        const prefix = sp === '/' ? '/' : sp + '/';
+        Object.keys(VFS.userFiles).forEach(p => {
+          if (p.indexOf(prefix) !== 0) return;
+          const rel2 = p.slice(prefix.length);
+          VFS._writeFile((dp === '/' ? '/' : dp + '/') + rel2, VFS.userFiles[p].content, false);
+          VFS.userFiles[(dp === '/' ? '/' : dp + '/') + rel2].mode = VFS.userFiles[p].mode;
+        });
+        VFS._persist();
+        ctx.push(ctx.line('cp: copied ' + src + ' -> ' + dst, K.ok));
+        return;
+      }
+      const r = VFS._readFile(sp);
+      if (!r.ok) { ctx.push(ctx.line(r.err, K.err)); return; }
+      const w = VFS._writeFile(dp, r.content, false);
+      if (!w.ok) { ctx.push(ctx.line(w.err, K.err)); return; }
+      if (r.mode) VFS.userFiles[w.path].mode = r.mode;
+      ctx.push(ctx.line('cp: copied ' + src + ' -> ' + dst, K.ok));
+    }
+  });
+
+  SHELL.register({
+    name: 'mv',
+    desc: '移动 / 重命名文件',
+    usage: 'mv <src> <dst>',
+    run(ctx) {
+      const [src, dst] = ctx.args.slice(1);
+      if (!src || !dst) { ctx.push(ctx.line('usage: mv <src> <dst>', K.err)); return; }
+      const sp = SHELL._resolvePath(src);
+      const dp = SHELL._resolvePath(dst);
+      const sst = VFS._stat(sp);
+      if (!sst) { ctx.push(ctx.line(`mv: ${src}: No such file or directory`, K.err)); return; }
+      if (sp === '/') { ctx.push(ctx.line('mv: cannot move /', K.err)); return; }
+      if (sst.dir) {
+        const prefix = sp === '/' ? '/' : sp + '/';
+        const moves = [];
+        Object.keys(VFS.userFiles).forEach(p => {
+          if (p.indexOf(prefix) === 0) moves.push([p, (dp === '/' ? '/' : dp + '/') + p.slice(prefix.length)]);
+        });
+        if (!moves.length && !VFS.userDirs[sp]) { ctx.push(ctx.line(`mv: ${src}: Nothing to move`, K.err)); return; }
+        moves.forEach(([f, t]) => {
+          VFS._writeFile(t, VFS.userFiles[f].content, false);
+          VFS.userFiles[t].mode = VFS.userFiles[f].mode;
+          delete VFS.userFiles[f];
+        });
+        delete VFS.userDirs[sp];
+        VFS._persist();
+        ctx.push(ctx.line('mv: moved ' + src + ' -> ' + dst, K.ok));
+        return;
+      }
+      delete VFS.userFiles[dp];
+      VFS.userFiles[dp] = Object.assign({}, VFS.userFiles[sp]);
+      delete VFS.userFiles[sp];
+      VFS._persist();
+      ctx.push(ctx.line('mv: moved ' + src + ' -> ' + dst, K.ok));
+    }
+  });
+
+  SHELL.register({
+    name: 'chmod',
+    desc: '修改文件权限位（如 644 / 755）',
+    usage: 'chmod <mode> <file>',
+    run(ctx) {
+      const mode = ctx.args[1];
+      const p = ctx.args[2];
+      if (!mode || !p) { ctx.push(ctx.line('usage: chmod <mode> <file>', K.err)); return; }
+      const path = SHELL._resolvePath(p);
+      if (!VFS.userFiles[path]) { ctx.push(ctx.line(`chmod: ${p}: No such file (or read-only)`, K.err)); return; }
+      const m = String(mode).replace(/^0+/, '');
+      const bits = ['---', '--x', '-w-', '-wx', 'r--', 'r-x', 'rw-', 'rwx'];
+      const mk = (n) => (bits[n >> 6] || '---') + (bits[(n >> 3) & 7] || '---') + (bits[n & 7] || '---');
+      if (/^[0-7]{3,4}$/.test(m)) VFS.userFiles[path].mode = mk(parseInt(m.slice(-3), 8));
+      else ctx.push(ctx.line(`chmod: invalid mode: ${mode}`, K.err));
+    }
+  });
+
+  SHELL.register({
+    name: 'sync',
+    desc: '将用户文件系统快照刷入持久化存储',
+    usage: 'sync',
+    run(ctx) {
+      VFS._persist();
+      ctx.push(ctx.line('sync: user file system flushed to persistent storage.', K.ok));
+    }
+  });
+
+  SHELL.register({
+    name: 'file',
+    desc: '识别文件类型',
+    usage: 'file <path>',
+    run(ctx) {
+      const p = ctx.args[1];
+      if (!p) { ctx.push(ctx.line('usage: file <path>', K.err)); return; }
+      const path = SHELL._resolvePath(p);
+      const st = VFS._stat(path);
+      if (!st) { ctx.push(ctx.line(`file: ${p}: No such file or directory`, K.err)); return; }
+      if (st.dir) { ctx.push(ctx.line(path + ': directory', K.out)); return; }
+      const r = VFS._readFile(path);
+      const text = r.ok ? String(r.content) : '';
+      const isBin = /[\u0000-\u0008\u000e-\u001f]/.test(text.slice(0, 512));
+      ctx.push(ctx.line(path + ': ' + (isBin ? 'binary data' : 'ASCII text'), K.out));
+    }
+  });
+
+  /* ==================== 文本处理（支持 stdin 管道） ==================== */
+
+  SHELL.register({
+    name: 'grep',
+    desc: '按模式过滤行（支持正则；管道输入）',
+    usage: 'grep [-i] [-n] <pattern> [file]',
+    run(ctx) {
+      const ign = ctx.args.includes('-i');
+      const num = ctx.args.includes('-n');
+      const rest = ctx.args.slice(1).filter(a => a !== '-i' && a !== '-n');
+      const pat = rest[0];
+      if (!pat) { ctx.push(ctx.line('usage: grep [-i] [-n] <pattern> [file]', K.err)); return; }
+      let re;
+      try { re = new RegExp(pat, ign ? 'i' : ''); } catch (e) { ctx.push(ctx.line('grep: invalid pattern', K.err)); return; }
+      const fileArg = rest[1];
+      let lines;
+      if (fileArg) {
+        const r = VFS._readFile(fileArg);
+        if (!r.ok) { ctx.push(ctx.line(r.err, K.err)); return; }
+        lines = String(r.content).split('\n');
+      } else if (ctx.stdin && ctx.stdin.length) {
+        lines = ctx.stdin;
+      } else {
+        lines = [];
+      }
+      lines.forEach((l, i) => {
+        if (re.test(l)) ctx.push(ctx.line(num ? String(i + 1) + ':' + l : l, K.out));
+      });
+    }
+  });
+
+  SHELL.register({
+    name: 'head',
+    desc: '输出前 N 行（默认 10）',
+    usage: 'head [-n N] [file]',
+    run(ctx) {
+      let n = 10;
+      const ni = ctx.args.indexOf('-n');
+      if (ni > -1) n = parseInt(ctx.args[ni + 1], 10);
+      else { const m = ctx.args.slice(1).find(a => /^-\d+$/.test(a)); if (m) n = Math.abs(parseInt(m, 10)); }
+      const fileArg = ctx.args.slice(1).find(a => a !== '-n' && !/^-\d+$/.test(a));
+      let lines;
+      if (fileArg) {
+        const r = VFS._readFile(fileArg);
+        if (!r.ok) { ctx.push(ctx.line(r.err, K.err)); return; }
+        lines = String(r.content).split('\n');
+      } else {
+        lines = ctx.stdin && ctx.stdin.length ? ctx.stdin : [];
+      }
+      lines.slice(0, n).forEach(l => ctx.push(ctx.line(l, K.out)));
+    }
+  });
+
+  SHELL.register({
+    name: 'tail',
+    desc: '输出末尾 N 行（默认 10）',
+    usage: 'tail [-n N] [file]',
+    run(ctx) {
+      let n = 10;
+      const ni = ctx.args.indexOf('-n');
+      if (ni > -1) n = parseInt(ctx.args[ni + 1], 10);
+      else { const m = ctx.args.slice(1).find(a => /^-\d+$/.test(a)); if (m) n = Math.abs(parseInt(m, 10)); }
+      const fileArg = ctx.args.slice(1).find(a => a !== '-n' && !/^-\d+$/.test(a));
+      let lines;
+      if (fileArg) {
+        const r = VFS._readFile(fileArg);
+        if (!r.ok) { ctx.push(ctx.line(r.err, K.err)); return; }
+        lines = String(r.content).split('\n');
+      } else {
+        lines = ctx.stdin && ctx.stdin.length ? ctx.stdin : [];
+      }
+      lines.slice(-n).forEach(l => ctx.push(ctx.line(l, K.out)));
+    }
+  });
+
+  SHELL.register({
+    name: 'tac',
+    desc: '反向输出每一行',
+    usage: 'tac [file]',
+    run(ctx) {
+      const { lines } = readLines(ctx, 1);
+      if (!lines) return;
+      lines.slice().reverse().forEach(l => ctx.push(ctx.line(l, K.out)));
+    }
+  });
+
+  SHELL.register({
+    name: 'wc',
+    desc: '统计行/词/字节数',
+    usage: 'wc [-l|-w|-c] [file]',
+    run(ctx) {
+      const { lines } = readLines(ctx, 1, ['-l', '-w', '-c']);
+      if (!lines) return;
+      let lc = 0, wc2 = 0, cc = 0;
+      lines.forEach(l => { lc++; wc2 += l.trim() ? l.trim().split(/\s+/).length : 0; cc += l.length + 1; });
+      const parts = [];
+      if (ctx.args.includes('-l')) parts.push(lc + ' lines');
+      else if (ctx.args.includes('-w')) parts.push(wc2 + ' words');
+      else if (ctx.args.includes('-c')) parts.push(cc + ' bytes');
+      else parts.push(lc + ' lines  ' + wc2 + ' words  ' + cc + ' bytes');
+      ctx.push(ctx.line(parts.join('  '), K.out));
+    }
+  });
+
+  SHELL.register({
+    name: 'sort',
+    desc: '按字典序排序行',
+    usage: 'sort [file]',
+    run(ctx) {
+      const { lines } = readLines(ctx, 1);
+      if (!lines) return;
+      lines.slice().sort().forEach(l => ctx.push(ctx.line(l, K.out)));
+    }
+  });
+
+  SHELL.register({
+    name: 'uniq',
+    desc: '消除相邻重复行',
+    usage: 'uniq [file]',
+    run(ctx) {
+      const { lines } = readLines(ctx, 1);
+      if (!lines) return;
+      let prev = null;
+      lines.forEach(l => { if (l !== prev) { ctx.push(ctx.line(l, K.out)); prev = l; } });
+    }
+  });
+
+  SHELL.register({
+    name: 'find',
+    desc: '查找文件（-name 支持 * ? 通配）',
+    usage: 'find <dir> -name <pattern>',
+    run(ctx) {
+      const d = ctx.args[1];
+      const ni = ctx.args.indexOf('-name');
+      const pat = ni > -1 ? ctx.args[ni + 1] : '*';
+      if (!d) { ctx.push(ctx.line('usage: find <dir> -name <pattern>', K.err)); return; }
+      const base = SHELL._resolvePath(d);
+      const re = new RegExp('^' + String(pat).replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\*/g, '.*').replace(/\\\?/g, '.') + '$');
+      const hits = [];
+      const walk = (dir) => {
+        // 静态只读 tree（ROM 内置目录/文件）
+        (VFS.tree[dir] || []).forEach(en => {
+          const isDir = en.endsWith('/');
+          const nm = isDir ? en.slice(0, -1) : en;
+          const full = dir === '/' ? '/' + nm : dir + '/' + nm;
+          if (re.test(nm)) hits.push(full);
+          if (isDir) walk(full);
+        });
+      };
+      walk(base === '/' ? '/' : base.replace(/\/+$/, ''));
+      // 用户可写文件
+      Object.keys(VFS.userFiles).forEach(p => {
+        if (p.indexOf(base) === 0 && re.test(p.split('/').pop())) hits.push(p);
+      });
+      if (!hits.length) ctx.push(ctx.line('find: no matches', K.out));
+      hits.sort().forEach(h => ctx.push(ctx.line(h, K.out)));
+    }
+  });
+
+  /* ==================== 会话 / 用户 / 历史 ==================== */
+
+  SHELL.register({
+    name: 'whoami',
+    desc: '显示当前用户',
+    usage: 'whoami',
+    run(ctx) { ctx.push(ctx.line(SHELL.env.USER || 'root', K.out)); }
+  });
+
+  SHELL.register({
+    name: 'id',
+    desc: '显示用户身份',
+    usage: 'id',
+    run(ctx) {
+      const u = SHELL.env.USER || 'root';
+      ctx.push(ctx.line('uid=0(root) gid=0(root) groups=0(root),1007(uucp)' + (u === 'root' ? '' : ' user=' + u), K.out));
+    }
+  });
+
+  SHELL.register({
+    name: 'history',
+    desc: '显示本次会话命令历史',
+    usage: 'history',
+    run(ctx) {
+      if (!SHELL._hist.length) { ctx.push(ctx.line('(no commands yet)', K.out)); return; }
+      SHELL._hist.forEach((c, i) => ctx.push(ctx.line(String(i + 1).padStart(4) + '  ' + c, K.out)));
+    }
+  });
+
+  /* ==================== 进程 / 任务 ==================== */
+
+  SHELL.register({
+    name: 'jobs',
+    desc: '列出后台任务',
+    usage: 'jobs',
+    run(ctx) {
+      if (!SHELL._bgJobs.size) { ctx.push(ctx.line('(no background jobs)', K.out)); return; }
+      for (const j of SHELL._bgJobs.values()) {
+        const mark = j.state === 'running' ? '+' : '-';
+        ctx.push(ctx.line('[' + String(j.pid).padStart(2) + '] ' + mark + '  ' + j.state.padEnd(8) + j.cmd, K.out));
+      }
+    }
+  });
+
+  SHELL.register({
+    name: 'ps',
+    desc: '显示进程表（内核任务）',
+    usage: 'ps',
+    run(ctx) {
+      ctx.push(ctx.line('PID  STATE   COMMAND', K.sys));
+      ctx.push(ctx.line(String(1).padStart(4) + '  running  init (nsos)', K.out));
+      ctx.push(ctx.line(String(2).padStart(4) + '  running  kthreadd', K.out));
+      for (const j of SHELL._bgJobs.values()) {
+        ctx.push(ctx.line(String(j.pid + 100).padStart(4) + '  ' + j.state.padEnd(7) + ' ' + j.cmd, K.out));
+      }
+    }
+  });
+
+  SHELL.register({
+    name: 'sleep',
+    desc: '休眠 N 秒（可被 kill 中断）',
+    usage: 'sleep <seconds>',
+    async run(ctx) {
+      const n = parseFloat(ctx.args[1], 10);
+      if (isNaN(n)) { ctx.push(ctx.line('usage: sleep <seconds>', K.err)); return; }
+      await new Promise((res) => {
+        const t = setTimeout(res, Math.min(n, 30) * 1000);
+        if (ctx.job && ctx.job._sleepTimers) ctx.job._sleepTimers.add(t);
+      });
+    }
+  });
+
+  SHELL.register({
+    name: 'kill',
+    desc: '终止后台任务（kill %N 或 kill <pid>）',
+    usage: 'kill <%job> | <pid>',
+    run(ctx) {
+      const t = ctx.args[1];
+      if (!t) { ctx.push(ctx.line('usage: kill <%job>', K.err)); return; }
+      const pid = parseInt(String(t).replace(/^%/, ''), 10);
+      if (SHELL._killJob(pid)) ctx.push(ctx.line('killed job ' + pid, K.ok));
+      else ctx.push(ctx.line(`kill: ${t}: no such job`, K.err));
+    }
+  });
+
+  SHELL.register({
+    name: 'wait',
+    desc: '等待后台任务结束（不带参数等全部）',
+    usage: 'wait [pid]',
+    async run(ctx) {
+      const pid = ctx.args[1] ? parseInt(ctx.args[1], 10) : null;
+      if (pid) {
+        const j = SHELL._bgJobs.get(pid);
+        if (!j) { ctx.push(ctx.line(`wait: ${pid}: no such job`, K.err)); return; }
+        while (j.state === 'running' || SHELL._bgJobs.get(pid)) {
+          if (j.state === 'done' || j.state === 'killed') break;
+          await new Promise(r => setTimeout(r, 120));
+        }
+        ctx.push(ctx.line('job ' + pid + ' finished (' + SHELL._bgJobs.get(pid)?.state + ')', K.out));
+        return;
+      }
+      while ([...SHELL._bgJobs.values()].some(j => j.state === 'running')) {
+        await new Promise(r => setTimeout(r, 120));
+      }
+      ctx.push(ctx.line('all background jobs finished', K.out));
+    }
+  });
+
+  /* ==================== 环境变量 ==================== */
+
+  SHELL.register({
+    name: 'env',
+    desc: '显示所有环境变量',
+    usage: 'env',
+    run(ctx) {
+      Object.keys(SHELL.env).sort().forEach(k => ctx.push(ctx.line(k + '=' + SHELL.env[k], K.out)));
+    }
+  });
+
+  SHELL.register({
+    name: 'export',
+    desc: '设置环境变量：export KEY=VALUE（无参显示全部）',
+    usage: 'export [KEY=VALUE ...]',
+    run(ctx) {
+      const assigns = ctx.args.slice(1).filter(a => a.indexOf('=') > 0);
+      if (!ctx.args.slice(1).length || !assigns.length) {
+        Object.keys(SHELL.env).sort().forEach(k => ctx.push(ctx.line('export ' + k + '="' + SHELL.env[k] + '"', K.out)));
+        return;
+      }
+      assigns.forEach(as => {
+        const eq = as.indexOf('=');
+        const k = as.slice(0, eq);
+        const v = as.slice(eq + 1);
+        SHELL.env[k] = v;
+      });
+      SHELL._saveEnv();
+      ctx.push(ctx.line('environment updated', K.ok));
+    }
+  });
+
+  SHELL.register({
+    name: 'unset',
+    desc: '删除环境变量',
+    usage: 'unset <KEY>',
+    run(ctx) {
+      const k = ctx.args[1];
+      if (!k) { ctx.push(ctx.line('usage: unset <KEY>', K.err)); return; }
+      if (k === 'PATH' || k === 'HOME' || k === 'USER') { ctx.push(ctx.line('unset: cannot unset reserved variable ' + k, K.err)); return; }
+      if (SHELL.env[k] === undefined) { ctx.push(ctx.line('unset: ' + k + ': not set', K.err)); return; }
+      delete SHELL.env[k];
+      SHELL._saveEnv();
+      ctx.push(ctx.line('unset ' + k, K.ok));
+    }
+  });
+
+  SHELL.register({
+    name: 'set',
+    desc: '显示 shell 变量（含系统状态）',
+    usage: 'set',
+    run(ctx) {
+      ctx.push(ctx.line('CWD=' + SHELL._cwd, K.out));
+      ctx.push(ctx.line('MODE=' + OS.state.current, K.out));
+      ctx.push(ctx.line('LOCKED=' + (SHELL.locked() ? 'yes' : 'no'), K.out));
+      ctx.push(ctx.line('SERIAL=' + SHELL.serialno(), K.out));
+      Object.keys(SHELL.env).sort().forEach(k => ctx.push(ctx.line(k + '=' + SHELL.env[k], K.out)));
+    }
+  });
+
+  /* ==================== 其它常用 ==================== */
+
+  SHELL.register({
+    name: 'printf',
+    desc: '格式化输出（%s %d 与 \\n \\t）',
+    usage: 'printf <fmt> [args...]',
+    run(ctx) {
+      const fmt = ctx.args[1];
+      if (!fmt) { ctx.push(ctx.line('usage: printf <fmt> [args...]', K.err)); return; }
+      const vals = ctx.args.slice(2);
+      let vali = 0;
+      let out = fmt.replace(/%([sdif])/g, (m, kind) => {
+        const v = (vali < vals.length) ? vals[vali++] : '';
+        if (kind === 's') return v;
+        return String(parseInt(v, 10) || 0);
+      });
+      out = out.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\\\/g, '\\');
+      ctx.push(ctx.line(out, K.out));
+    }
+  });
+
+  SHELL.register({
+    name: 'seq',
+    desc: '输出数字序列',
+    usage: 'seq [start] <end>',
+    run(ctx) {
+      let start = 1, end;
+      if (ctx.args[2]) { start = parseInt(ctx.args[1], 10); end = parseInt(ctx.args[2], 10); }
+      else end = parseInt(ctx.args[1], 10);
+      if (isNaN(end)) { ctx.push(ctx.line('usage: seq [start] <end>', K.err)); return; }
+      for (let i = start; i <= end; i++) ctx.push(ctx.line(String(i), K.out));
+    }
+  });
+
+  SHELL.register({
+    name: 'which',
+    desc: '显示命令所在位置',
+    usage: 'which <cmd>',
+    run(ctx) {
+      const c = ctx.args[1];
+      if (!c) { ctx.push(ctx.line('usage: which <cmd>', K.err)); return; }
+      const def = SHELL.cmds.get(c.toLowerCase());
+      if (def) ctx.push(ctx.line('/bin/' + def.name, K.out));
+      else { ctx.push(ctx.line('which: ' + c + ': not found', K.err)); }
+    }
+  });
+
+  SHELL.register({
+    name: 'man',
+    desc: '查看命令帮助',
+    usage: 'man <cmd>',
+    run(ctx) {
+      const c = ctx.args[1];
+      const def = c && SHELL.cmds.get(c.toLowerCase());
+      if (!def) { ctx.push(ctx.line('man: ' + (c || '') + ': no manual entry', K.err)); return; }
+      ctx.push(ctx.line('NAME', K.sys));
+      ctx.push(ctx.line('    ' + def.name + ' - ' + (def.desc || ''), K.out));
+      ctx.push(ctx.line('SYNOPSIS', K.sys));
+      ctx.push(ctx.line('    ' + (def.usage || def.name), K.out));
+    }
+  });
 
   OS.reg('shell', SHELL);
 })(window);
