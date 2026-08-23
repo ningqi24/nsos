@@ -31,11 +31,9 @@
         { label: '重启系统',               action: 'reboot-system' },
         { label: '重启到 Bootloader',     action: 'restart-bootloader' },
         { label: '进入 Fastboot',         action: 'enter-fastboot' },
-        { label: '通过 ADB 应用更新',     action: 'sideload' },
-        { label: '从内部存储应用更新',     action: 'apply-from-storage' },
-        { label: '清除数据（恢复出厂）',   action: 'factory-reset' },
+        { label: '挂载 /system 或 /cache', action: 'mount-system' },
         { label: '清除缓存分区',          action: 'wipe-cache' },
-        { label: '挂载 /system',         action: 'mount-system' },
+        { label: '清除数据（恢复出厂）',   action: 'factory-reset' },
         { label: '查看恢复日志',          action: 'show-log' },
         { label: '运行图形测试',          action: 'graphics-test' },
         { label: '命令行 (Shell)',        action: 'shell-cli' },
@@ -49,10 +47,7 @@
     index: 0,
     confirmPending: false,
     menu: null,
-    mounted: false,       // /system 是否已挂载（模拟）
     panel: null,          // 当前打开的信息面板 DOM
-    updateWrap: null,     // 更新进度弹层 DOM
-    updateTimer: null,
 
     init() {
       OS.bus.on('input:key', (e) => this._handleKey(e));
@@ -67,7 +62,6 @@
 
     _teardown() {
       this._closePanel();
-      this._cleanupUpdate();
       this.confirmPending = false;
       // 取消可能仍在进行的传输会话（统一进度源的强制清理）
       if (OS.shell && OS.shell.updater) OS.shell.updater.cancel();
@@ -76,16 +70,20 @@
     _open(mode) {
       this.mode = mode;
       this.confirmPending = false;
-      this.mounted = false;
       this.menu = document.getElementById(CONFIG[mode].menuId);
+      // 进入 recovery：按真实分区状态初始化 /cache 占用并入会话日志
+      if (mode === 'recovery' && OS.shell && OS.shell.VFS) {
+        OS.shell.VFS.primeCache();
+        OS.shell.rec.add('I', 'recovery mode started, waiting for action');
+      }
       this._render();
       this.move(0);
     },
 
-    /* 动态菜单文案：随状态更新（挂载 /system、Bootloader 锁定） */
+    /* 动态菜单文案：随状态更新（分区挂载、Bootloader 锁定） */
     _itemLabel(item) {
       if (item.action === 'mount-system') {
-        return this.mounted ? '卸载 /system' : '挂载 /system';
+        return '挂载 /system 或 /cache';
       }
       if (item.action === 'lock-bootloader') {
         if (OS.shell && OS.shell.locked) {
@@ -119,9 +117,9 @@
       const st = OS.state.current;
       if (st !== 'fastboot' && st !== 'recovery') return;
       if (e.type === 'back') { this._closePanel(); return; }
-      // 信息面板 / 更新弹层 / 内嵌终端打开时，菜单操作全部忽略，
+      // 信息面板 / 内嵌终端打开时，菜单操作全部忽略，
       // 否则终端里敲 Enter 会误触隐藏菜单（终端底层交互的守卫）
-      if (this.panel || this.updateWrap) return;
+      if (this.panel) return;
       if (e.type === 'nav') this.move(this.index + (e.dir === 'down' ? 1 : -1));
       else if (e.type === 'select') this.choose();
       else if (e.type === 'digit') { this.move(e.digit - 1); this.choose(); }
@@ -187,29 +185,20 @@
         case 'shell-cli':
           this._openShell();
           break;
-        case 'sideload':
-          this._startUpdate('adb sideload update.zip', this._sideloadHTML());
-          break;
-        case 'apply-from-storage':
-          this._openPanel('选择更新包（内部存储）', this._storageListHTML());
-          this._bindStorageList(this.panel);
+        case 'mount-system':
+          this._openMountPanel();
           break;
         case 'wipe-cache':
-          this._toast('缓存分区已清除（模拟）', 'success');
-          break;
-        case 'mount-system':
-          this.mounted = !this.mounted;
-          this._toast(this.mounted ? '已挂载 /system（模拟）' : '已卸载 /system（模拟）', 'success');
-          this._render();
+          this._execWithOutput('wipe cache');
           break;
         case 'show-log':
-          this._openPanel('恢复日志', this._logHTML());
+          this._openLogPanel();
           break;
         case 'graphics-test':
-          this._openPanel('图形测试', this._graphicsHTML());
+          this._openGraphicsTest();
           break;
         case 'factory-reset':
-          this._resetDone();
+          this._execWithOutput('wipe data');
           break;
         default:
           console.warn('[modes] unknown action:', action);
@@ -290,111 +279,108 @@
       return rows.map(r => '<div class="ft-panel-row"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>').join('');
     },
 
-    _logHTML() {
-      const lines = [
-        '[I] nsos recovery v0.1.0',
-        '[I] 读取分区表... OK',
-        '[I] 校验 /system 挂载: no',
-        '[I] 未发现异常日志',
-        '[I] 上次会话: ' + new Date().toISOString(),
-        '[I] 设备健康状态: 良好'
-      ];
-      return '<pre class="ft-panel-log">' + lines.join('\n') + '</pre>';
+    /* ---- 挂载面板：真实分区状态 + 挂载/卸载动作 ---- */
+    _mountRowHTML(part, display, sector) {
+      const vm = (OS.shell && OS.shell.VFS) || {};
+      const mnt = !!(vm.mount && vm.mount['/' + part]);
+      return '<div class="ft-panel-row" data-part="' + part + '">' +
+             '<span>' + display + (mnt ? ' <b class="ok">[已挂载]</b>' : ' <b class="warn">[未挂载]</b>') + '</span>' +
+             '<button type="button" class="ft-mount-btn" data-op="' + (mnt ? 'umount' : 'mount') + '">' +
+             (mnt ? '卸载' : '挂载') + '</button></div>';
     },
 
-    _graphicsHTML() {
-      return '<div class="ft-panel-gfx"><div class="gfx-bar g0"></div><div class="gfx-bar g1"></div>' +
-             '<div class="gfx-bar g2"></div><div class="gfx-bar g3"></div>' +
-             '<p class="gfx-msg">图形渲染自检中… 正常</p></div>';
-    },
-
-    /* 内部存储更新：虚拟文件列表，点击即应用 */
-    _storageListHTML() {
-      const files = [
-        'nsos-ota-2026-08-23.zip',
-        'nsos-ota-2026-08-16.zip',
-        'nsos-ota-bugfix.zip'
-      ];
-      return files.map((f, i) =>
-        '<button class="ft-file" type="button" data-file="' + i + '">' + f +
-        ' ›</button>').join('');
-    },
-
-    /* 面板内的存储文件点击 -> 进入更新流程 */
-    _bindStorageList(panel) {
-      const that = this;
-      panel.querySelectorAll('.ft-file').forEach((btn) => {
+    _openMountPanel() {
+      if (!OS.shell || !OS.shell.VFS) { this._toast('shell 不可用', 'error'); return; }
+      const body = '<div class="ft-panel-log" style="font-size:13px">' +
+        '<div class="kbd-hint">提示：/system 只读挂载，/cache 可写。挂载后才能 ls / cat 访问。</div>' +
+        this._mountRowHTML('system', '/system (system)', 'system') +
+        this._mountRowHTML('cache', '/cache (cache)', 'cache') +
+        '<div class="ft-mnt-out"></div></div>';
+      this._openPanel('挂载分区', body);
+      const out = this.panel.querySelector('.ft-mnt-out');
+      this.panel.querySelectorAll('.ft-mount-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
-          that._closePanel();
-          that._startUpdate('update.zip', that._progressHTML(btn.textContent.trim()));
+          const part = btn.closest('.ft-panel-row').dataset.part;
+          const op = btn.dataset.op;
+          const cmd = op + ' ' + part;
+          OS.shell.exec(cmd, {
+            onLine: (l) => {
+              const line = document.createElement('div');
+              line.textContent = '> ' + l.text;
+              line.style.color = l.kind === 'err' ? '#ff8a80' : (l.kind === 'ok' ? '#9be79b' : '#cfd8cf');
+              out.appendChild(line);
+            }
+          }).then(() => {
+            // 刷新挂载状态行
+            this.panel.querySelectorAll('.ft-panel-row[data-part]').forEach((row) => {
+              const p = row.dataset.part;
+              const vm = OS.shell.VFS;
+              const mnt = !!(vm.mount && vm.mount['/' + p]);
+              row.querySelector('span').innerHTML = (p === 'system' ? '/system (system)' : '/cache (cache)') +
+                (mnt ? ' <b class="ok">[已挂载]</b>' : ' <b class="warn">[未挂载]</b>');
+              row.querySelector('.ft-mount-btn').dataset.op = mnt ? 'umount' : 'mount';
+              row.querySelector('.ft-mount-btn').textContent = mnt ? '卸载' : '挂载';
+            });
+          });
         });
       });
     },
 
-    /* ---- 更新进度弹层 ---- */
-    /* 进度源来自 OS.shell.updater（全局唯一），终端 sideload 与菜单更新共用同一计时器 */
-    _startUpdate(cmdLabel, bodyHTML) {
-      this._cleanupUpdate();
-      const layer = document.getElementById(CONFIG[this.mode].layer);
-      const wrap = document.createElement('div');
-      wrap.className = 'ft-update';
-      wrap.innerHTML = bodyHTML;
-      wrap.querySelector('.ft-update-cmd').textContent = cmdLabel;
-      layer.appendChild(wrap);
-      this.updateWrap = wrap;
-      if (this.menu) this.menu.style.display = 'none';
+    /* ---- 命令输出面板：真实执行并渲染输出行 ---- */
+    _execWithOutput(cmd) {
+      const box = document.createElement('div');
+      box.className = 'ft-panel-log';
+      this._openPanel('执行 ' + cmd.split(' ')[0], box.outerHTML);
+      const body = this.panel.querySelector('.ft-panel-log');
+      body.textContent = '> ' + cmd + '\n';
+      OS.shell.exec(cmd, {
+        onLine: (l) => {
+          const line = document.createElement('div');
+          line.textContent = l.text;
+          line.style.color = l.kind === 'err' ? '#ff8a80' : (l.kind === 'ok' ? '#9be79b' : '#cfd8cf');
+          body.appendChild(line);
+        }
+      });
+    },
 
-      const bar = wrap.querySelector('.ft-update-bar');
-      const pct = wrap.querySelector('.ft-update-pct');
-      const u = OS.shell.updater.start(cmdLabel);
-      if (u.error) {
-        this._toast(u.error, 'error');
-        this._cleanupUpdate();
+    /* 恢复日志：真实读取 Recovery 会话日志（REC 事件记录） */
+    _openLogPanel() {
+      const rec = (OS.shell && OS.shell.rec) || { lines: [] };
+      const last = rec.lines.slice(-60);
+      const html = '<pre class="ft-panel-log">' +
+        (last.length ? last.join('\n') : '(empty)') + '</pre>';
+      this._openPanel('恢复日志（真实会话）', html);
+    },
+
+    /* 图形测试：真实 canvas 渲染并回读像素校验 */
+    _openGraphicsTest() {
+      const c = document.createElement('canvas');
+      c.width = 240; c.height = 120;
+      c.className = 'ft-gfx-canvas';
+      const ctx = c.getContext && c.getContext('2d');
+      if (!ctx) {
+        this._openPanel('图形测试', '<pre class="ft-panel-log">FAIL: Canvas 2D 不可用</pre>');
         return;
       }
-      u.onTick((p) => {
-        bar.style.width = p + '%';
-        pct.textContent = p + '%';
-      });
-      u.onDone(() => {
-        bar.style.width = '100%';
-        pct.textContent = '100%';
-        wrap.querySelector('.ft-update-title').textContent = '更新完成';
-        wrap.querySelector('.ft-update-cmd').textContent = '正在重启系统…';
-        setTimeout(() => OS.state.transition('boot', { source: 'update-done' }), 1200);
-      });
-    },
-
-    _progressHTML(fileName) {
-      return '<div class="ft-update-title">正在应用更新</div>' +
-             '<div class="ft-update-cmd"></div>' +
-             '<div class="ft-update-file">' + fileName + '</div>' +
-             '<div class="ft-update-track"><i class="ft-update-bar"></i></div>' +
-             '<div class="ft-update-pct">0%</div>';
-    },
-
-    _sideloadHTML() {
-      return this._progressHTML('等待主机推送 update.zip …');
-    },
-
-    _cleanupUpdate() {
-      if (this.updateTimer) { clearInterval(this.updateTimer); this.updateTimer = null; }
-      if (this.updateWrap) {
-        this.updateWrap.remove();
-        this.updateWrap = null;
-        if (this.menu) this.menu.style.display = '';
-      }
-    },
-
-    /* 模拟清除数据 -> 提示完成 -> 自动重启 */
-    _resetDone() {
-      if (!this.menu) return;
-      this.menu.innerHTML = '';
-      const li = document.createElement('li');
-      li.className = 'sel';
-      li.textContent = '数据已清除，正在重启…';
-      this.menu.appendChild(li);
-      setTimeout(() => OS.state.transition('boot', { source: 'factory-reset-done' }), 1800);
+      // 真实绘制四色渐变条 + 圆
+      const grad = ctx.createLinearGradient(0, 0, c.width, 0);
+      grad.addColorStop(0, '#1b2a3a'); grad.addColorStop(1, '#5b6b7a');
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.fillStyle = '#ef9f37'; ctx.beginPath(); ctx.arc(60, 60, 34, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#e8efe8'; ctx.fillRect(180, 40, 36, 36);
+      // 回读像素校验是否为纯黑（确保 GPU/渲染管线真跑起来）
+      let sample;
+      try { const d = ctx.getImageData(60, 60, 1, 1).data; sample = d[0] + ',' + d[1] + ',' + d[2]; } catch (e) { sample = (e && e.message) || 'read error'; }
+      const ok = /^238,159,55,/.test(String(sample)) || /^238/.test(String(sample));
+      const verdict = ok ? 'PASS: 渲染管线正常（采样色值 ' + sample + '）' : 'WARN: 渲染像素回读异常（' + sample + '）';
+      this._openPanel('图形测试（真实渲染）',
+        '<div style="text-align:center"><canvas class="ft-gfx-canvas" width="240" height="120" style="border:1px solid #3a444a;border-radius:8px;background:#0b0e12"></canvas></div>' +
+        '<pre class="ft-panel-log" style="margin-top:12px">' + verdict + '\n* 渐变矩形 240×120\n* 圆 (r=34, #ef9f37)\n* 方块 36×36</pre>');
+      // 真正把绘制画上去
+      setTimeout(() => {
+        const cv = this.panel && this.panel.querySelector('canvas');
+        if (cv) { const g = cv.getContext('2d'); g.drawImage(c, 0, 0); }
+      }, 20);
     }
   };
 
