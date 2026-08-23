@@ -17,7 +17,8 @@
     { id: 'notes',   name: '备忘录', icon: 'notes',   cls: 'ic-orange' },
     { id: 'settings',name: '设置',   icon: 'settings',cls: 'ic-red'    },
     { id: 'browser', name: '浏览器', icon: 'browser', cls: 'ic-blue'   },
-    { id: 'music',   name: '音乐',   icon: 'music',   cls: 'ic-purple' }
+    { id: 'music',   name: '音乐',   icon: 'music',   cls: 'ic-purple' },
+    { id: 'terminal',name: '终端',   icon: 'terminal',cls: 'ic-green'  }
   ];
 
   const DOCK = [
