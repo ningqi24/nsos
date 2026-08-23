@@ -34,6 +34,7 @@
         { label: '挂载 /system 或 /cache', action: 'mount-system' },
         { label: '清除缓存分区',          action: 'wipe-cache' },
         { label: '清除数据（恢复出厂）',   action: 'factory-reset' },
+        { label: '从 /sdcard 应用更新',    action: 'ota-gui' },
         { label: '查看恢复日志',          action: 'show-log' },
         { label: '运行图形测试',          action: 'graphics-test' },
         { label: '命令行 (Shell)',        action: 'shell-cli' },
@@ -200,6 +201,9 @@
         case 'factory-reset':
           this._execWithOutput('wipe data');
           break;
+        case 'ota-gui':
+          this._openOtaPanel();
+          break;
         default:
           console.warn('[modes] unknown action:', action);
       }
@@ -340,6 +344,73 @@
           line.style.color = l.kind === 'err' ? '#ff8a80' : (l.kind === 'ok' ? '#9be79b' : '#cfd8cf');
           body.appendChild(line);
         }
+      });
+    },
+
+    /* ---- OTA 应用面板（GUI 更新）：真实扫描 /sdcard 包，调 ota apply 同一命令引擎 ---- */
+    _openOtaPanel() {
+      const shell = OS.shell;
+      if (!shell || !shell.VFS) { this._toast('shell 不可用', 'error'); return; }
+      const v = OS.version || {};
+      const curS = (v.major != null) ? 'v' + v.major + '.' + v.minor + '.' + v.build : '?';
+      const parseV = (name) => {
+        const m = /^nsos-ota-v?(\d+)\.(\d+)\.(\d+)\.zip$/.exec(name);
+        return m ? { major: +m[1], minor: +m[2], build: +m[3], s: name } : null;
+      };
+      const newer = (a, b) => a.major > b.major ||
+        (a.major === b.major && a.minor > b.minor) ||
+        (a.major === b.major && a.minor === b.minor && a.build > b.build);
+      const pkgs = (shell.VFS.tree['/sdcard'] || []).map(parseV).filter(Boolean)
+        .sort((a, b) => a.major - b.major || a.minor - b.minor || a.build - b.build);
+
+      const rows = pkgs.length ? pkgs.map((p) => {
+        const up = newer(p, v);
+        return '<div class="ft-ota-row">' +
+          '<span><b class="ft-ota-fn">' + p.s + '</b> <i>v' + p.major + '.' + p.minor + '.' + p.build + '</i>' +
+          ' <b class="' + (up ? 'ok' : 'warn') + '">' + (up ? '可更新' : '非新版本') + '</b></span>' +
+          (up ? '<button type="button" class="ft-mount-btn" data-apply="' + p.s + '">应用更新</button>' : '') +
+          '</div>';
+      }).join('') : '<div class="kbd-hint">/sdcard 无更新包</div>';
+
+      const bodyHTML =
+        '<div class="kbd-hint">当前 ' + curS + ' · 仅版本更高的包可应用（不可降级）</div>' + rows +
+        '<div class="ft-ota-progress" hidden>' +
+        '<div class="ft-ota-bar"></div><span class="ft-ota-pct">0%</span></div>' +
+        '<div class="ft-ota-done" hidden>' +
+        '<button type="button" class="ft-mount-btn" data-reboot>重启系统（应用生效）</button>' +
+        '<button type="button" class="ft-mount-btn" data-again>返回重新选择</button></div>';
+      this._openPanel('从 /sdcard 应用更新', bodyHTML);
+
+      const panel = this.panel;
+      if (!panel) return;
+      panel.querySelectorAll('[data-apply]').forEach((btn) => {
+        btn.addEventListener('click', () => this._otaApply(btn.dataset.apply));
+      });
+      const rb = panel.querySelector('[data-reboot]');
+      if (rb) rb.addEventListener('click', () => shell.exec('reboot'));
+      const ag = panel.querySelector('[data-again]');
+      if (ag) ag.addEventListener('click', () => { this._closePanel(); this._openOtaPanel(); });
+    },
+
+    _otaApply(file) {
+      const shell = OS.shell;
+      if (!shell || !shell.updater) { this._toast('更新器不可用', 'error'); return; }
+      const u = shell.updater.start('OTA apply ' + file);
+      if (u.error) { this._toast(u.error, 'error'); return; }
+      const panel = this.panel;
+      if (!panel) return;
+      const prog = panel.querySelector('.ft-ota-progress');
+      const bar = panel.querySelector('.ft-ota-bar');
+      const pct = panel.querySelector('.ft-ota-pct');
+      if (prog) prog.hidden = false;
+      this._toast('正在应用 ' + file + ' ...', 'info');
+      u.onTick((p) => { if (bar) bar.style.width = p + '%'; if (pct) pct.textContent = p + '%'; });
+      u.onDone(() => {
+        if (pct) pct.textContent = '100%';
+        if (OS.shell && OS.shell.rec) OS.shell.rec.add('I', 'OTA applied ' + file + ' (GUI)');
+        const done = panel.querySelector('.ft-ota-done');
+        if (done) done.hidden = false;
+        this._toast(file + ' 应用完成，请重启系统生效', 'success');
       });
     },
 
