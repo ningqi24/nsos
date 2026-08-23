@@ -88,6 +88,18 @@
   /* ---------- 初始化 ---------- */
   function init() {
     LayerManager.init();
+
+    /* 状态栏显隐：仅锁屏/桌面/应用显示；开机、工程模式、关机均隐藏且不可用 */
+    const sysui = document.getElementById('os-sysui');
+    const SYS_UI_STATES = ['locked', 'home', 'app'];
+    function applySysUi(state) {
+      if (!sysui) return;
+      const show = SYS_UI_STATES.includes(state);
+      sysui.hidden = !show;
+    }
+    OS.bus.on('state:change', ({ to }) => applySysUi(to));
+    applySysUi(OS.state.current);
+
     if (OS.input && OS.input.start) OS.input.start();   // 输入层
     if (OS.modes && OS.modes.init) OS.modes.init();     // Fastboot/Recovery
     if (OS.locked && OS.locked.init) OS.locked.init();  // 真锁屏
