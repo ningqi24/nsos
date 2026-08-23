@@ -25,6 +25,8 @@
   pointer-events: none;
 }
 #os-sysui > * { pointer-events: auto; }
+/* 开机 / 工程模式 / 关机时状态栏整体隐藏，不可见亦不可交互 */
+#os-sysui[hidden] { display: none !important; }
 
 /* layer 进入的默认淡入，保证切换不突兀 */
 .os-layer.os-active { animation: os-layer-in var(--os-dur-norm) var(--os-ease-out) both; }
