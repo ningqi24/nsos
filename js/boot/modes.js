@@ -224,12 +224,24 @@
       });
     },
 
-    /* 内嵌命令终端：工程模式里的底层命令行交互 */
+    /* 内嵌命令终端：工程模式里的底层命令行交互（全屏布局） */
     _openShell() {
-      this._openPanel('命令行 (Shell)', '<os-terminal></os-terminal>');
+      this._closePanel();
+      const layer = document.getElementById(CONFIG[this.mode].layer);
+      const panel = document.createElement('div');
+      panel.className = 'ft-panel ft-shell';
+      panel.innerHTML =
+        '<div class="ft-shell-head"><span>nsos 工程终端</span>' +
+        '<button class="ft-panel-close" type="button">✕ 返回</button></div>' +
+        '<os-terminal class="ft-shell-term"></os-terminal>';
+      panel.querySelector('.ft-panel-close').addEventListener('click', () => this._closePanel());
+      panel.addEventListener('click', (e) => { if (e.target === panel) this._closePanel(); });
+      layer.appendChild(panel);
+      this.panel = panel;
+      if (this.menu) this.menu.style.display = 'none';
+      this._term = panel.querySelector('os-terminal');
       setTimeout(() => {
-        const t = this.panel && this.panel.querySelector('os-terminal');
-        if (t) { try { t.focus(); } catch (e) {} }
+        if (this._term) { try { this._term.focus(); } catch (e) {} }
       }, 60);
     },
 
