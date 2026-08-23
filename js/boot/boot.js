@@ -18,14 +18,24 @@
     interrupt: null,     // 'fastboot' | 'recovery' | null
     timers: [],
 
-    /* 进入 boot 状态统一入口 */
-    start() {
+    /* 进入 boot 状态统一入口
+     * opts.stayBootloader=true 时停留在 Bootloader（logo + 工程模式入口），
+     * 不自动跑开机动画；无操作 10s 后自动正常启动，避免卡死。 */
+    start(opts = {}) {
       this.seq = 'bootloader';
       this.interrupt = null;
+      this.stayBootloader = !!opts.stayBootloader;
       this._clearTimers();
 
       this._show('layer-bootloader');
       this._hide('layer-boot-anim');
+
+      if (this.stayBootloader) {
+        this._timer(() => {
+          if (this.seq === 'bootloader') this._runAnimation();
+        }, 10000);
+        return;
+      }
 
       // Logo 点亮停留 2s，然后进入开机动画
       this._timer(() => this._runAnimation(), 2000);
@@ -74,8 +84,8 @@
 
   OS.reg('boot', BOOT);
 
-  // 进入 boot 启动流程；离开 boot 清理定时器
-  OS.state.onEnter('boot', () => BOOT.start());
+  // 进入 boot 启动流程（透传 payload，支持 stayBootloader）；离开 boot 清理定时器
+  OS.state.onEnter('boot', (info) => BOOT.start((info && info.payload) || {}));
   OS.state.onLeave('boot', () => BOOT._clearTimers());
 
   // 开机动画隐藏入口
@@ -89,6 +99,13 @@
     if (vol === 'down' || vol === 'up') {
       OS.bus.emit('input:key', { type: 'key', key: 'vol-' + vol });
     }
+  });
+
+  // Bootloader 停留模式（重启到 Bootloader 后）：点击 logo 区域立即正常启动系统
+  document.addEventListener('click', (e) => {
+    if (OS.state.current !== 'boot' || BOOT.seq !== 'bootloader' || !BOOT.stayBootloader) return;
+    if (e.target.closest('.boot-key')) return;
+    BOOT._runAnimation();
   });
 
   // 关机状态下任意键开机
