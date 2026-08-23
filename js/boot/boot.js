@@ -20,7 +20,8 @@
 
     /* 进入 boot 状态统一入口
      * opts.stayBootloader=true 时停留在 Bootloader（logo + 工程模式入口），
-     * 不自动跑开机动画；无操作 10s 后自动正常启动，避免卡死。 */
+     * 始终停住不自动进系统，等用户主动操作（点击 logo 正常启动 /
+     * 点 FASTBOOT、RECOVERY 进工程模式）。 */
     start(opts = {}) {
       this.seq = 'bootloader';
       this.interrupt = null;
@@ -30,12 +31,7 @@
       this._show('layer-bootloader');
       this._hide('layer-boot-anim');
 
-      if (this.stayBootloader) {
-        this._timer(() => {
-          if (this.seq === 'bootloader') this._runAnimation();
-        }, 10000);
-        return;
-      }
+      if (this.stayBootloader) return;
 
       // Logo 点亮停留 2s，然后进入开机动画
       this._timer(() => this._runAnimation(), 2000);
