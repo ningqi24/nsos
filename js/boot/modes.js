@@ -97,8 +97,13 @@
     exec(action) {
       switch (action) {
         case 'reboot-system':
-        case 'restart-bootloader':
+          // 正常启动系统：跑完整开机链直到锁屏
           OS.state.transition('boot', { source: action });
+          break;
+        case 'restart-bootloader':
+          // 重启到 Bootloader：进入 boot 后停留在 logo 与工程模式入口，
+          // 不再自动跑开机动画（无操作 10s 自动正常启动）
+          OS.state.transition('boot', { source: action, stayBootloader: true });
           break;
         case 'power-off':
           OS.state.transition('poweroff', { source: action });
