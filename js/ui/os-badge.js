@@ -15,7 +15,7 @@
         min-width: 16px; height: 16px;
         padding: 0 4px;
         border-radius: var(--os-radius-full, 8px);
-        background: var(--os-accent, #3b82f6);
+        background: var(--os-accent, #ef9f37);
         color: #fff;
         font-size: var(--os-font-xs, 9px);
         font-weight: var(--os-font-weight-bold, 700);
