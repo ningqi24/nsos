@@ -442,7 +442,66 @@
     usage: 'version',
     run(ctx) {
       const v = OS.version;
-      ctx.push(ctx.line(`nsos ${v.major}.${v.minor}.${v.build} "${v.codename}"`, K.ok));
+      ctx.push(ctx.line(`nsos v${v.major}.${v.minor}.${v.build} "${v.codename}"`, K.ok));
+    }
+  });
+
+  SHELL.register({
+    name: 'ota',
+    desc: '系统更新（check / list / apply，真实读取 /sdcard 更新包）',
+    usage: 'ota check | ota list | ota apply <package.zip>',
+    run(ctx) {
+      const sub = (ctx.args[1] || 'check').toLowerCase();
+      const parseV = (name) => {
+        const m = /^nsos-ota-v?(\d+)\.(\d+)\.(\d+)\.zip$/.exec(name);
+        return m ? { major: +m[1], minor: +m[2], build: +m[3], s: name } : null;
+      };
+      const newerThan = (a, b) => a.major > b.major ||
+        (a.major === b.major && a.minor > b.minor) ||
+        (a.major === b.major && a.minor === b.minor && a.build > b.build);
+      const sdcard = VFS.tree['/sdcard'] || [];
+      const pkgs = sdcard.map(parseV).filter(Boolean).sort((a, b) => a.major - b.major || a.minor - b.minor || a.build - b.build);
+
+      if (sub === 'list') {
+        if (!pkgs.length) { ctx.push(ctx.line('ota: /sdcard 无更新包', K.out)); return; }
+        pkgs.forEach(p => ctx.push(ctx.line(p.s + '   v' + p.major + '.' + p.minor + '.' + p.build, K.out)));
+        return;
+      }
+      if (sub === 'check') {
+        if (!pkgs.length) { ctx.push(ctx.line('ota: /sdcard 无更新包', K.out)); return; }
+        const latest = pkgs[pkgs.length - 1];
+        const cur = OS.version;
+        if (newerThan(latest, cur)) {
+          ctx.push(ctx.line(`发现新版本 v${latest.major}.${latest.minor}.${latest.build}（当前 v${cur.major}.${cur.minor}.${cur.build}）`, K.warn));
+          ctx.push(ctx.line('可执行: ota apply ' + latest.s + '  （刷写需先 reboot recovery）', K.out));
+        } else {
+          ctx.push(ctx.line(`已是最新版本 v${cur.major}.${cur.minor}.${cur.build}`, K.ok));
+        }
+        return;
+      }
+      if (sub === 'apply') {
+        const f = ctx.args[2];
+        if (!f) { ctx.push(ctx.line('usage: ota apply <package.zip>', K.err)); return; }
+        if (OS.state.current !== 'recovery') {
+          ctx.push(ctx.line('ota: apply 仅在 recovery 模式可用，请先执行 reboot recovery', K.err));
+          return;
+        }
+        if (!sdcard.includes(f)) { ctx.push(ctx.line('ota: /sdcard 上不存在该更新包: ' + f, K.err)); return; }
+        const p = parseV(f);
+        if (!p) { ctx.push(ctx.line('ota: 无效的更新包名: ' + f, K.err)); return; }
+        const cur = OS.version;
+        if (!newerThan(p, cur)) { ctx.push(ctx.line('ota: 更新包版本（v' + p.major + '.' + p.minor + '.' + p.build + '）不高于当前版本，已拒绝', K.err)); return; }
+        const u = SHELL.updater.start('OTA apply ' + p.s);
+        if (u.error) { ctx.push(ctx.line(u.error, K.err)); return; }
+        u.onDone(() => {
+          ctx.push(ctx.line('Payload verified. Applying...', K.out));
+          ctx.push(ctx.line('OTA ' + p.s + ' -> v' + p.major + '.' + p.minor + '.' + p.build + ' applied OK', K.ok));
+          REC.add('I', 'OTA applied ' + p.s + ' (v' + p.major + '.' + p.minor + '.' + p.build + ')');
+          ctx.push(ctx.line('Rebooting...', K.out));
+        });
+        return;
+      }
+      ctx.push(ctx.line('usage: ota check|list|apply <file.zip>', K.err));
     }
   });
 
@@ -540,7 +599,7 @@
       '/': ['system/', 'proc/', 'sdcard/', 'cache/'],
       '/system': ['version', 'build.prop'],
       '/proc': ['version', 'cmdline', 'uptime', 'filesystems', 'mounts'],
-      '/sdcard': ['nsos-ota-2026-08-23.zip', 'nsos-ota-2026-08-16.zip', 'nsos-ota-bugfix.zip', 'Documents/'],
+      '/sdcard': ['nsos-ota-2026-08-23.zip', 'nsos-ota-2026-08-16.zip', 'nsos-ota-bugfix.zip', 'nsos-ota-v0.1.1.zip', 'Documents/'],
       '/sdcard/Documents': ['bootloader-unlock-guide.txt', 'README.txt'],
       '/cache': ['recovery.log']
     },
