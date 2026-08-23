@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="css/boot.css?v=9">
   <link rel="stylesheet" href="css/desktop.css?v=5">
   <link rel="stylesheet" href="css/system-fix.css?v=5">
+  <link rel="stylesheet" href="css/terminal.css?v=1">
 </head>
 <body>
   <!-- 系统渲染根：所有 Layer 挂载于此 -->
@@ -80,12 +81,9 @@
       </div>
     </section>
 
-    <!-- 应用层（P5 填充） -->
+    <!-- 应用层（P5 填充，终端应用等窗口在此渲染） -->
     <section id="layer-app"         class="os-layer" data-state="app" hidden>
-      <div class="app-placeholder">
-        <div class="ap-name" id="app-name">应用</div>
-        <p>应用容器建设中（P5）</p>
-      </div>
+      <div id="app-host"></div>
     </section>
 
     <!-- 全局系统 UI 挂载点（状态栏/控制中心等，P2/P3） -->
@@ -98,6 +96,8 @@
   <script src="js/core/state-machine.js?v=6"></script>
   <script src="js/core/storage.js?v=5"></script>
   <script src="js/core/core.js?v=5"></script>
+  <script src="js/core/device.js?v=1"></script>
+  <script src="js/core/shell.js?v=1"></script>
   <script src="js/main.js?v=6"></script>
   <!-- 组件代码库（P4 铺垫 · Web Components，框架无关） -->
   <script src="js/ui/os-icon.js?v=5"></script>
@@ -107,13 +107,14 @@
   <script src="js/ui/os-list-item.js?v=5"></script>
   <script src="js/ui/os-badge.js?v=5"></script>
   <script src="js/ui/os-toast.js?v=5"></script>
+  <script src="js/ui/os-terminal.js?v=1"></script>
   <!-- 启动链模块（P1） -->
   <script src="js/boot/input.js?v=5"></script>
   <script src="js/boot/boot.js?v=7"></script>
-  <script src="js/boot/modes.js?v=6"></script>
+  <script src="js/boot/modes.js?v=7"></script>
   <script src="js/boot/locked.js?v=5"></script>
   <!-- 桌面层模块（P2/P3） -->
-  <script src="js/desktop/statusbar.js?v=5"></script>
+  <script src="js/desktop/statusbar.js?v=6"></script>
   <script src="js/desktop/launcher.js?v=5"></script>
   <script src="js/desktop/notifications.js?v=5"></script>
   <script src="js/desktop/control-center.js?v=5"></script>
