@@ -42,7 +42,7 @@
         display: inline-block;
         width: 6px; height: 6px;
         border-radius: 50%;
-        background: var(--os-accent, #3b82f6);
+        background: var(--os-accent, #ef9f37);
         margin-left: 6px;
         vertical-align: middle;
       }
