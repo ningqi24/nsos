@@ -16,7 +16,7 @@
         height: 4px;
         border-radius: 2px;
         background: linear-gradient(90deg,
-          var(--os-accent, #3b82f6) var(--fill, 0%),
+          var(--os-accent, #ef9f37) var(--fill, 0%),
           var(--os-border, rgba(255,255,255,.2)) var(--fill, 0%));
         outline: none;
         cursor: pointer;
@@ -27,7 +27,7 @@
         width: 18px; height: 18px;
         border-radius: 50%;
         background: #fff;
-        border: 3px solid var(--os-accent, #3b82f6);
+        border: 3px solid var(--os-accent, #ef9f37);
         box-shadow: var(--os-shadow-1, 0 1px 6px rgba(0,0,0,.4));
         cursor: pointer;
       }
@@ -35,7 +35,7 @@
         width: 18px; height: 18px;
         border-radius: 50%;
         background: #fff;
-        border: 3px solid var(--os-accent, #3b82f6);
+        border: 3px solid var(--os-accent, #ef9f37);
         cursor: pointer;
       }
     </style>
