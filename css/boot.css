@@ -354,3 +354,42 @@
   transition: width .18s linear;
 }
 .ft-update-pct { margin-top: 14px; font-size: 14px; color: #e8efe8; letter-spacing: 1px; }
+
+/* OTA GUI 应用面板（modes.js ota-gui） */
+.ft-ota-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, .07);
+}
+.ft-ota-row:last-child { border-bottom: none; }
+.ft-ota-fn { color: #e8efe8; font-weight: 600; word-break: break-all; }
+.ft-ota-row i { color: #8a938a; font-style: normal; font-size: 12px; }
+.ft-ota-row b.ok { color: #9be79b; }
+.ft-ota-row b.warn { color: #ffb3b3; }
+.ft-ota-progress {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 12px;
+}
+.ft-ota-bar {
+  flex: 1;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #43e97b, #38f9d7);
+  border-radius: 999px;
+  transition: width .18s linear;
+}
+.ft-ota-pct { font-size: 13px; color: #9be79b; letter-spacing: 1px; }
+.ft-ota-done {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.ft-ota-done .ft-mount-btn { padding: 8px 16px; }
