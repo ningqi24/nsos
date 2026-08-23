@@ -35,6 +35,65 @@
       try { if (OS.storage) OS.storage.set('env', this.env); } catch (e) { /* 忽略 */ }
     },
     _hist: [], // 会话命令历史（history 命令读取）
+
+    // 命令别名（持久化到 OS.storage，alias/unalias 可改）
+    _alias: Object.assign({}, (function () {
+      try { return (OS.storage && OS.storage.get('alias', {})) || {}; } catch (e) { return {}; }
+    })()),
+    _saveAlias() {
+      try { if (OS.storage) OS.storage.set('alias', this._alias); } catch (e) { /* 忽略 */ }
+    },
+    // 递归展开行首别名（防环，深度上限 16）
+    _expandAlias(line) {
+      let cur = String(line || '').trim();
+      const seen = new Set();
+      for (let i = 0; i < 16; i++) {
+        const m = /^(\S+)([\s\S]*)$/.exec(cur);
+        if (!m) break;
+        const head = m[1];
+        if (!this._alias[head] || seen.has(head)) break;
+        seen.add(head);
+        cur = String(this._alias[head] + ' ' + m[2]).trim();
+      }
+      return cur;
+    },
+
+    /* ---------- Tab 补全 ---------- */
+    _pathEntities() {
+      const set = new Set();
+      const V = this.VFS || (typeof VFS !== 'undefined' ? VFS : null);
+      if (V) {
+        Object.keys(V.tree).forEach(d => {
+          set.add(d);
+          (V.tree[d] || []).forEach(ent => {
+            if (!/\/$/.test(ent)) set.add((d.endsWith('/') ? d : d + '/') + ent);
+          });
+        });
+        Object.keys(V.userFiles).forEach(p => set.add(p));
+        Object.keys(V.userDirs).forEach(p => set.add(p));
+      }
+      return [...set];
+    },
+    // 命令位补全命令/别名；参数位补全 VFS 路径（目录 / 文件 / 动态虚拟节点）
+    complete(prefix) {
+      const p = (prefix || '').trimEnd();
+      const words = p.split(/\s+/);
+      const last = words[words.length - 1] || '';
+      const isCmdPos = words.length <= 1 && p.indexOf(' ') < 0 && p.indexOf('/') < 0;
+      if (isCmdPos) return [...this.cmds.keys()].filter(n => n.startsWith(last)).sort();
+      const known = this._pathEntities();
+      const direct = known.filter(x => x.startsWith(last) && x !== last).sort();
+      if (direct.length) return direct;
+      const dir = /\/$/.test(last) ? last : last + '/';
+      if (known.includes(dir)) {
+        const kids = known
+          .filter(x => x.startsWith(dir) && x !== dir.replace(/\/$/, ''))
+          .sort();
+        if (kids.length) return kids;
+      }
+      return [];
+    },
+
     line(text, kind) {
       const o = { text: String(text), kind: kind || K.out };
       o.toString = () => o.text;
@@ -56,14 +115,24 @@
       return def;
     },
 
-    /* 解析命令行（支持单双引号包裹带空格参数） */
+    /* 解析命令行（支持单双引号包裹带空格参数；引号对合并进当前 token，如 k='v with space'） */
     parse(line) {
       const tokens = [];
-      const re = /"([^"]*)"|'([^']*)'|(\S+)/g;
-      let m;
-      while ((m = re.exec(line)) !== null) {
-        tokens.push(m[1] !== undefined ? m[1] : (m[2] !== undefined ? m[2] : m[3]));
+      let buf = '';
+      let q = null; // 当前引号类型：' 或 "
+      const flush = () => { if (buf) { tokens.push(buf); buf = ''; } };
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (q) {
+          if (c === q) q = null;
+          else buf += c;
+          continue;
+        }
+        if (c === "'" || c === '"') { q = c; continue; }
+        if (/\s/.test(c)) { flush(); continue; }
+        buf += c;
       }
+      flush();
       return tokens;
     },
 
@@ -81,10 +150,11 @@
         return ll;
       };
 
-      let raw = (input || '').trim();
-      if (!raw) return { code: 0, lines };
-      this._hist.push(raw);
+      const rawIn = (input || '').trim();
+      if (!rawIn) return { code: 0, lines };
+      this._hist.push(rawIn);
       if (this._hist.length > 200) this._hist.shift();
+      let raw = this._expandAlias(rawIn);
 
       // 后台任务（& 结尾）
       if (/&+\s*$/.test(raw)) {
@@ -112,6 +182,7 @@
         const segLines = [];
         const pctx = {
           args: redir.args, raw: seg, shell: this, stdin,
+          job: (hooks && hooks.job) || null,
           cwd: () => this._cwd,
           push: (l) => {
             const ll = (typeof l === 'string') ? this.line(l) : l;
@@ -238,11 +309,13 @@
       const job = {
         pid: this._bgNext++,
         cmd: command,
-        state: 'running',       // running | done | killed
+        state: 'running',       // running | done | killed | stopped
         ts: Date.now(),
         output: [],
         _sleepTimers: new Set()
       };
+      job._done = new Promise(r => { job._finish = r; });
+      job._resume = new Promise(r => { job._go = r; });
       this._bgJobs.set(job.pid, job);
       if (onLine) onLine(this.line(`[${job.pid}] ${command} &`, K.sys));
       (async () => {
@@ -252,30 +325,54 @@
             consumeSleep(t) { job._sleepTimers.add(t); return job; }
           };
           const res = await this.exec(command, {
+            job,
             onLine: (l) => {
               job.output.push(l);
-              if (job.killed || job.state === 'killed') return;
+              if (job.killed || job.state === 'killed' || job.state === 'stopped') return;
               if (onLine && onLine._bg !== false) onLine(l);
             }
           });
-          if (job.state === 'killed') return;
+          if (job.state === 'killed') { job._finish(); return; }
           job.state = 'done';
+          job._finish();
           if (onLine) onLine(this.line(`[${job.pid}] done (exit ${res.code})`, K.sys));
         } catch (e) {
           job.state = 'done';
+          job._finish();
           if (onLine) onLine(this.line(`[${job.pid}] finished with error`, K.err));
         }
       })();
       return job;
     },
 
-    _killJob(pid, sig /* unused */) {
+    /* 作业信号派发：TERM/KILL → killed，STOP/TSTP → stopped，CONT → running */
+    _signalJob(pid, sig) {
       const job = this._bgJobs.get(pid);
-      if (!job) return false;
+      if (!job) return null;
+      const s = String(sig || 'TERM').replace(/^SIG/, '').replace(/^-/, '').toUpperCase();
+      if (s === 'STOP' || s === 'TSTP' || s === '19') {
+        if (job.state !== 'running') return { job, action: 'noop', state: job.state };
+        job.state = 'stopped';
+        job._sleepTimers.forEach(t => clearTimeout(t));
+        job._sleepTimers.clear();
+        return { job, action: 'stopped' };
+      }
+      if (s === 'CONT' || s === '18') {
+        if (job.state !== 'stopped') return { job, action: 'noop', state: job.state };
+        job.state = 'running';
+        if (job._go) job._go();
+        return { job, action: 'resumed' };
+      }
+      /* KILL / TERM / 9 / 默认：终止 */
       job.state = 'killed';
       job._sleepTimers.forEach(t => clearTimeout(t));
       job._sleepTimers.clear();
-      return true;
+      if (job._finish) job._finish();
+      return { job, action: 'killed' };
+    },
+
+    _killJob(pid, sig) {
+      return !!this._signalJob(pid, sig);
     },
 
     /* ---------- 输出订阅（工程模式面板等可复用） ---------- */
@@ -599,7 +696,7 @@
       '/': ['system/', 'proc/', 'sdcard/', 'cache/'],
       '/system': ['version', 'build.prop'],
       '/proc': ['version', 'cmdline', 'uptime', 'filesystems', 'mounts'],
-      '/sdcard': ['nsos-ota-2026-08-23.zip', 'nsos-ota-2026-08-16.zip', 'nsos-ota-bugfix.zip', 'nsos-ota-v0.1.1.zip', 'nsos-ota-v0.1.2.zip', 'Documents/'],
+      '/sdcard': ['nsos-ota-2026-08-23.zip', 'nsos-ota-2026-08-16.zip', 'nsos-ota-bugfix.zip', 'nsos-ota-v0.1.1.zip', 'nsos-ota-v0.1.2.zip', 'nsos-ota-v0.1.3.zip', 'Documents/'],
       '/sdcard/Documents': ['bootloader-unlock-guide.txt', 'README.txt'],
       '/cache': ['recovery.log']
     },
@@ -1579,6 +1676,55 @@
     }
   });
 
+  /* ==================== 命令别名 ==================== */
+
+  SHELL.register({
+    name: 'alias',
+    desc: '定义/查看命令别名：alias name=cmd（无参列出全部）',
+    usage: 'alias [name[=value] ...]',
+    run(ctx) {
+      const rest = ctx.args.slice(1);
+      if (!rest.length) {
+        const ks = Object.keys(SHELL._alias).sort();
+        if (!ks.length) { ctx.push(ctx.line('no aliases defined', K.out)); return; }
+        ks.forEach(k => ctx.push(ctx.line('alias ' + k + "='" + SHELL._alias[k] + "'", K.out)));
+        return;
+      }
+      rest.forEach(a => {
+        const eq = a.indexOf('=');
+        if (eq < 1) {
+          const v = SHELL._alias[a];
+          ctx.push(v !== undefined
+            ? ctx.line('alias ' + a + "='" + v + "'", K.out)
+            : ctx.line('alias: ' + a + ': not found', K.err));
+          return;
+        }
+        const k = a.slice(0, eq);
+        const v = a.slice(eq + 1).replace(/^['"]|['"]$/g, '');
+        SHELL._alias[k] = v;
+        SHELL._saveAlias();
+        ctx.push(ctx.line('alias ' + k + "='" + v + "'", K.ok));
+      });
+    }
+  });
+
+  SHELL.register({
+    name: 'unalias',
+    desc: '删除命令别名',
+    usage: 'unalias <name>',
+    run(ctx) {
+      const k = ctx.args[1];
+      if (!k) { ctx.push(ctx.line('usage: unalias <name>', K.err)); return; }
+      if (SHELL._alias[k] !== undefined) {
+        delete SHELL._alias[k];
+        SHELL._saveAlias();
+        ctx.push(ctx.line('unalias ' + k, K.ok));
+      } else {
+        ctx.push(ctx.line('unalias: ' + k + ': not found', K.err));
+      }
+    }
+  });
+
   /* ==================== 进程 / 任务 ==================== */
 
   SHELL.register({
@@ -1610,28 +1756,96 @@
 
   SHELL.register({
     name: 'sleep',
-    desc: '休眠 N 秒（可被 kill 中断）',
+    desc: '休眠 N 秒（支持作业信号控制：kill / suspend / bg / fg）',
     usage: 'sleep <seconds>',
     async run(ctx) {
       const n = parseFloat(ctx.args[1], 10);
       if (isNaN(n)) { ctx.push(ctx.line('usage: sleep <seconds>', K.err)); return; }
-      await new Promise((res) => {
-        const t = setTimeout(res, Math.min(n, 30) * 1000);
-        if (ctx.job && ctx.job._sleepTimers) ctx.job._sleepTimers.add(t);
-      });
+      const job = (ctx && ctx.job) || null;
+      const total = Math.min(n, 30) * 1000;
+      let t0 = Date.now();
+      let elapsed = 0;
+      while (elapsed < total) {
+        if (job && job.state === 'killed') return;
+        if (job && job.state === 'stopped') {
+          await job._resume;
+          if (job.state === 'killed') return;
+          t0 = Date.now() - elapsed; // 挂起时段从计时中剔除，恢复后续跑
+          continue;
+        }
+        await new Promise((res) => {
+          const t = setTimeout(res, Math.max(40, Math.min(200, total - elapsed)));
+          if (job && job._sleepTimers) job._sleepTimers.add(t);
+        });
+        elapsed = Date.now() - t0;
+      }
     }
   });
 
   SHELL.register({
     name: 'kill',
-    desc: '终止后台任务（kill %N 或 kill <pid>）',
-    usage: 'kill <%job> | <pid>',
+    desc: '向作业发信号：kill [-9|-KILL|-TERM|-STOP|-CONT] <%job>|<pid>，默认 TERM',
+    usage: 'kill [-<signal>] <%job> | <pid>',
+    run(ctx) {
+      let sig = 'TERM';
+      let t = ctx.args[1];
+      if (t && /^-/.test(t)) { sig = t.slice(1); t = ctx.args[2]; }
+      if (!t) { ctx.push(ctx.line('usage: ' + this.usage, K.err)); return; }
+      const pid = parseInt(String(t).replace(/^%/, ''), 10);
+      const r = SHELL._signalJob(pid, sig);
+      if (!r) { ctx.push(ctx.line(`kill: ${t}: no such job`, K.err)); return; }
+      if (r.action === 'killed') ctx.push(ctx.line('killed job ' + pid, K.ok));
+      else if (r.action === 'stopped') ctx.push(ctx.line(`job ${pid} suspended (SIGSTOP)`, K.warn));
+      else if (r.action === 'resumed') ctx.push(ctx.line(`job ${pid} continued (SIGCONT)`, K.ok));
+      else ctx.push(ctx.line(`kill: ${t}: job is ${r.state} (signal ignored)`, K.out));
+    }
+  });
+
+  SHELL.register({
+    name: 'suspend', aliases: ['stop'],
+    desc: '挂起后台作业（SIGTSTP）',
+    usage: 'suspend <%job> | <pid>',
     run(ctx) {
       const t = ctx.args[1];
-      if (!t) { ctx.push(ctx.line('usage: kill <%job>', K.err)); return; }
+      if (!t) { ctx.push(ctx.line('usage: suspend <%job>', K.err)); return; }
       const pid = parseInt(String(t).replace(/^%/, ''), 10);
-      if (SHELL._killJob(pid)) ctx.push(ctx.line('killed job ' + pid, K.ok));
-      else ctx.push(ctx.line(`kill: ${t}: no such job`, K.err));
+      const r = SHELL._signalJob(pid, 'STOP');
+      if (!r) { ctx.push(ctx.line(`suspend: ${t}: no such job`, K.err)); return; }
+      if (r.action === 'stopped') ctx.push(ctx.line(`job ${pid} suspended`, K.warn));
+      else ctx.push(ctx.line(`suspend: ${t}: job is ${r.state} (no-op)`, K.out));
+    }
+  });
+
+  SHELL.register({
+    name: 'bg',
+    desc: '继续后台被挂起的作业（SIGCONT）',
+    usage: 'bg <%job> | <pid>',
+    run(ctx) {
+      const t = ctx.args[1];
+      if (!t) { ctx.push(ctx.line('usage: bg <%job>', K.err)); return; }
+      const pid = parseInt(String(t).replace(/^%/, ''), 10);
+      const j = SHELL._bgJobs.get(pid);
+      const r = SHELL._signalJob(pid, 'CONT');
+      if (!r) { ctx.push(ctx.line(`bg: ${t}: no such job`, K.err)); return; }
+      if (r.action === 'resumed') ctx.push(ctx.line(`[${pid}] ${j.cmd} &`, K.ok));
+      else ctx.push(ctx.line(`bg: ${t}: job is ${r.state} (no-op)`, K.out));
+    }
+  });
+
+  SHELL.register({
+    name: 'fg',
+    desc: '把后台作业带到前台并等待结束（自动继续被挂起的作业）',
+    usage: 'fg <%job> | <pid>',
+    async run(ctx) {
+      const t = ctx.args[1];
+      if (!t) { ctx.push(ctx.line('usage: fg <%job>', K.err)); return; }
+      const pid = parseInt(String(t).replace(/^%/, ''), 10);
+      const j = SHELL._bgJobs.get(pid);
+      if (!j) { ctx.push(ctx.line(`fg: ${t}: no such job`, K.err)); return; }
+      if (j.state === 'stopped') SHELL._signalJob(pid, 'CONT');
+      ctx.push(ctx.line(`[${pid}] ${j.cmd} (fg)`, K.sys));
+      if (j._done) await j._done;
+      ctx.push(ctx.line(`[${pid}] finished (${j.state})`, K.out));
     }
   });
 
@@ -1644,14 +1858,16 @@
       if (pid) {
         const j = SHELL._bgJobs.get(pid);
         if (!j) { ctx.push(ctx.line(`wait: ${pid}: no such job`, K.err)); return; }
-        while (j.state === 'running' || SHELL._bgJobs.get(pid)) {
-          if (j.state === 'done' || j.state === 'killed') break;
-          await new Promise(r => setTimeout(r, 120));
+        if (j._done) await j._done;
+        else {
+          while (j.state === 'running' || j.state === 'stopped') {
+            await new Promise(r => setTimeout(r, 120));
+          }
         }
-        ctx.push(ctx.line('job ' + pid + ' finished (' + SHELL._bgJobs.get(pid)?.state + ')', K.out));
+        ctx.push(ctx.line('job ' + pid + ' finished (' + (SHELL._bgJobs.get(pid) || j).state + ')', K.out));
         return;
       }
-      while ([...SHELL._bgJobs.values()].some(j => j.state === 'running')) {
+      while ([...SHELL._bgJobs.values()].some(j => j.state === 'running' || j.state === 'stopped')) {
         await new Promise(r => setTimeout(r, 120));
       }
       ctx.push(ctx.line('all background jobs finished', K.out));
