@@ -327,7 +327,7 @@
       const rows = [
         ['model', d.model], ['bootloader', this.locked() ? 'locked' : 'unlocked'],
         ['platform', d.platform], ['osBrowser', d.osBrowser],
-        ['battery', d.battery], ['charging', d.charging],
+        ['battery', d.battery], ['charging', d.charging], ['batteryAPI', d.batteryAPI],
         ['screen', d.screen], ['dpr', d.dpr],
         ['memory', d.memory], ['cores', d.cores],
         ['network', d.network], ['online', d.online],
@@ -599,7 +599,7 @@
       '/': ['system/', 'proc/', 'sdcard/', 'cache/'],
       '/system': ['version', 'build.prop'],
       '/proc': ['version', 'cmdline', 'uptime', 'filesystems', 'mounts'],
-      '/sdcard': ['nsos-ota-2026-08-23.zip', 'nsos-ota-2026-08-16.zip', 'nsos-ota-bugfix.zip', 'nsos-ota-v0.1.1.zip', 'Documents/'],
+      '/sdcard': ['nsos-ota-2026-08-23.zip', 'nsos-ota-2026-08-16.zip', 'nsos-ota-bugfix.zip', 'nsos-ota-v0.1.1.zip', 'nsos-ota-v0.1.2.zip', 'Documents/'],
       '/sdcard/Documents': ['bootloader-unlock-guide.txt', 'README.txt'],
       '/cache': ['recovery.log']
     },
