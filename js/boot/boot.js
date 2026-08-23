@@ -2,9 +2,10 @@
  * nsos - boot.js (P1.1 ~ P1.3 / P1.7)
  * BootManager：控制开机流程
  *   bootloader(Logo 2s) -> 开机动画(2.6s) -> locked
- *   开机动画期间：
+ *   Bootloader 阶段：
  *     音量下 -> Fastboot
  *     音量上 -> Recovery
+ *   进入开机动画后不再受理工程模式入口
  *   关机状态下任意键重新开机
  * ============================================================ */
 (function (global) {
@@ -52,9 +53,10 @@
       }, 2600);
     },
 
-    /* Logo 与开机动画期间的隐藏入口（音量下 -> Fastboot，音量上 -> Recovery） */
+    /* Logo 阶段的隐藏入口（音量下 -> Fastboot，音量上 -> Recovery）。
+     * 仅 bootloader 阶段响应，进入开机动画后不再受理。 */
     _handleKey(e) {
-      if (this.seq !== 'bootloader' && this.seq !== 'animation') return;
+      if (this.seq !== 'bootloader') return;
       if (e.type === 'key' && e.key === 'vol-down') {
         this.interrupt = 'fastboot';
         OS.state.transition('fastboot', { source: 'vol-down' });
