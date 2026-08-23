@@ -28,7 +28,7 @@
   animation: boot-logo-in 1.2s .15s var(--os-ease-out) both;
 }
 @keyframes boot-mascot-in { from { opacity: 0; transform: scale(.7) translateY(8px); } to { opacity: 1; transform: none; } }
-/* 底部信息：powered by + 音量键提示（类似 Android 开机画面底部小字） */
+/* 底部信息：powered by + 工程模式入口（类似 Android 开机画面底部小字） */
 .boot-bottom {
   position: absolute;
   left: 0; right: 0;
@@ -150,7 +150,6 @@
   letter-spacing: 1px;
   color: var(--os-fg-2);
 }
-.boot-anim-keys { margin-top: 22px; width: 100%; max-width: 320px; }
 
 /* ---------- Fastboot / Recovery：工程终端风 ---------- */
 #layer-fastboot, #layer-recovery {
