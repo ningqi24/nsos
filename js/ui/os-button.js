@@ -37,7 +37,7 @@
       .btn.lg { padding: 14px 26px; font-size: var(--os-font-lg, 16px); border-radius: var(--os-radius-lg, 18px); }
 
       /* variants */
-      .btn.v-primary { background: var(--os-accent, #3b82f6); color: #fff; }
+      .btn.v-primary { background: var(--os-accent, #ef9f37); color: #fff; }
       .btn.v-danger  { background: var(--os-danger, #ef4444); color: #fff; }
       .btn.v-success { background: var(--os-success, #22c55e); color: #fff; }
       .btn.v-ghost   { background: transparent; border: 1px solid var(--os-border, rgba(255,255,255,.1)); color: var(--os-fg-1, rgba(255,255,255,.7)); }
