@@ -6,8 +6,8 @@
   <title>nsos</title>
   <link rel="stylesheet" href="css/base.css?v=5">
   <link rel="stylesheet" href="css/tokens.css?v=5">
-  <link rel="stylesheet" href="css/layers.css?v=5">
-  <link rel="stylesheet" href="css/boot.css?v=7">
+  <link rel="stylesheet" href="css/layers.css?v=6">
+  <link rel="stylesheet" href="css/boot.css?v=8">
   <link rel="stylesheet" href="css/desktop.css?v=5">
   <link rel="stylesheet" href="css/system-fix.css?v=5">
 </head>
@@ -32,8 +32,8 @@
       <div class="boot-bottom">
         <div class="boot-powered">POWERED BY HTML</div>
         <div class="boot-keys">
-          <span class="boot-key" data-vol="down">音量下 · Fastboot</span>
-          <span class="boot-key" data-vol="up">音量上 · Recovery</span>
+          <button class="boot-key" type="button" data-vol="down">FASTBOOT</button>
+          <button class="boot-key" type="button" data-vol="up">RECOVERY</button>
         </div>
       </div>
     </section>
@@ -43,11 +43,7 @@
       <div class="boot-anim-wrap">
         <div class="boot-anim-ring"></div>
         <div class="boot-anim-bar"><i id="boot-progress"></i></div>
-        <div class="boot-anim-hint">点击下方按钮进入工程模式</div>
-        <div class="boot-keys boot-anim-keys">
-          <button class="boot-key" type="button" data-vol="down">FASTBOOT</button>
-          <button class="boot-key" type="button" data-vol="up">RECOVERY</button>
-        </div>
+        <div class="boot-anim-hint">正在启动系统…</div>
       </div>
     </section>
 
@@ -102,7 +98,7 @@
   <script src="js/core/state-machine.js?v=5"></script>
   <script src="js/core/storage.js?v=5"></script>
   <script src="js/core/core.js?v=5"></script>
-  <script src="js/main.js?v=5"></script>
+  <script src="js/main.js?v=6"></script>
   <!-- 组件代码库（P4 铺垫 · Web Components，框架无关） -->
   <script src="js/ui/os-icon.js?v=5"></script>
   <script src="js/ui/os-button.js?v=5"></script>
@@ -113,7 +109,7 @@
   <script src="js/ui/os-toast.js?v=5"></script>
   <!-- 启动链模块（P1） -->
   <script src="js/boot/input.js?v=5"></script>
-  <script src="js/boot/boot.js?v=5"></script>
+  <script src="js/boot/boot.js?v=6"></script>
   <script src="js/boot/modes.js?v=5"></script>
   <script src="js/boot/locked.js?v=5"></script>
   <!-- 桌面层模块（P2/P3） -->
