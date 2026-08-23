@@ -9,22 +9,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 50% 40%, #0b0b14 0%, #000 72%);
+  background: var(--os-bg-0);
 }
 .boot-logo-wrap { text-align: center; margin-top: -4vh; }
 .boot-mascot {
   display: block;
   width: 84px; height: 84px;
   margin: 0 auto 14px;
-  filter: drop-shadow(0 0 14px rgba(164,198,57,.55)) drop-shadow(0 0 40px rgba(164,198,57,.22));
+  filter: drop-shadow(0 0 16px rgba(239,159,55,.4)) drop-shadow(0 0 46px rgba(239,159,55,.16));
   animation: boot-mascot-in 1s var(--os-ease-out) both;
 }
 .boot-logo {
   font-size: 34px;
   font-weight: 700;
   letter-spacing: 6px;
-  color: #fff;
-  text-shadow: 0 0 18px rgba(59,130,246,.6), 0 0 60px rgba(59,130,246,.28);
+  color: var(--os-fg-0);
+  text-shadow: 0 0 18px rgba(239,159,55,.5), 0 0 60px rgba(239,159,55,.22);
   animation: boot-logo-in 1.2s .15s var(--os-ease-out) both;
 }
 @keyframes boot-mascot-in { from { opacity: 0; transform: scale(.7) translateY(8px); } to { opacity: 1; transform: none; } }
@@ -52,25 +52,25 @@
   gap: 16px;
   animation: boot-tag-in 1.2s .6s var(--os-ease-out) both;
 }
-/* 拟物（Neumorphism）方形虚拟键：对角亮暗双阴影 + 按下内凹 */
+/* 方框虚拟键：石墨纯色 + 悬浮阴影（无渐变），按下向深处沉入 */
 .boot-key {
   flex: 1;
   max-width: 46%;
   appearance: none;
-  border: 0;
+  border: 1px solid rgba(255,255,255,.08);
   outline: none;
   font-family: inherit;
   padding: 15px 0;
   border-radius: 9px;
-  background: linear-gradient(145deg, #171a24, #12141c);
+  background: var(--os-bg-2);
   box-shadow:
-    6px 6px 14px rgba(0, 0, 0, .62),
-    -6px -6px 14px rgba(255, 255, 255, .05);
+    0 2px 6px rgba(0, 0, 0, .5),
+    0 8px 20px rgba(0, 0, 0, .35);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 3px;
   text-indent: 3px;
-  color: rgba(255, 255, 255, .78);
+  color: rgba(255, 255, 255, .8);
   cursor: pointer;
   position: relative;
   overflow: hidden;
@@ -81,17 +81,19 @@
 }
 .boot-key:hover {
   color: #fff;
+  border-color: rgba(255, 255, 255, .16);
   box-shadow:
-    7px 7px 16px rgba(0, 0, 0, .68),
-    -7px -7px 16px rgba(255, 255, 255, .08);
+    0 3px 8px rgba(0, 0, 0, .55),
+    0 10px 26px rgba(0, 0, 0, .4);
 }
 .boot-key:active {
   transform: translateY(1px) scale(.97);
-  color: var(--os-accent, #3b82f6);
+  color: var(--os-accent);
+  border-color: rgba(239,159,55,.4);
   box-shadow:
-    inset 5px 5px 12px rgba(0, 0, 0, .7),
-    inset -5px -5px 12px rgba(255, 255, 255, .04);
-  background: linear-gradient(145deg, #12141c, #171a24);
+    inset 3px 3px 8px rgba(0, 0, 0, .55),
+    inset -2px -2px 6px rgba(255, 255, 255, .03);
+  background: var(--os-bg-3);
 }
 /* 点击水波扩散动效 */
 .boot-key::after {
@@ -121,14 +123,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000;
+  background: var(--os-bg-0);
 }
 .boot-anim-wrap { display: flex; flex-direction: column; align-items: center; }
 .boot-anim-ring {
   width: 84px; height: 84px;
   border-radius: 50%;
-  border: 3px solid rgba(255,255,255,.1);
+  border: 3px solid rgba(255,255,255,.08);
   border-top-color: var(--os-accent);
+  box-shadow: 0 0 22px rgba(239,159,55,.14);
   animation: os-spin 1s linear infinite;
 }
 @keyframes os-spin { to { transform: rotate(360deg); } }
@@ -136,13 +139,13 @@
   width: 220px; height: 3px;
   margin-top: 42px;
   border-radius: 2px;
-  background: rgba(255,255,255,.12);
+  background: rgba(255,255,255,.1);
   overflow: hidden;
 }
 .boot-anim-bar i {
   display: block; height: 100%; width: 0%;
   border-radius: 2px;
-  background: linear-gradient(90deg, var(--os-accent), #a78bfa);
+  background: var(--os-accent);
 }
 .boot-anim-hint {
   margin-top: 26px;
@@ -202,7 +205,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(160deg, #1e1b4b 0%, #0f172a 55%, #000 100%);
+  background: var(--os-bg-0);
 }
 .lock-wrap { display: flex; flex-direction: column; align-items: center; }
 .lock-time { font-size: 90px; font-weight: 200; letter-spacing: 2px; text-shadow: 0 2px 24px rgba(0,0,0,.5); }
@@ -224,9 +227,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background:
-    radial-gradient(circle at 70% 20%, rgba(59,130,246,.18), transparent 45%),
-    linear-gradient(160deg, #14151f 0%, #000 100%);
+  background: var(--os-bg-0);
 }
 .home-placeholder { display: flex; flex-direction: column; align-items: center; gap: 18px; color: var(--os-fg-1); }
 .home-icon { font-size: 40px; color: var(--os-accent); }
