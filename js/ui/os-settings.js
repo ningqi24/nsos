@@ -206,6 +206,7 @@
     _renderUpdate() {
       const v = OS.version || {};
       const curS = (v.major != null) ? 'v' + v.major + '.' + v.minor + '.' + v.build : '?';
+      const otaSource = (OS.shell && OS.shell.otaSource) ? OS.shell.otaSource() : 'ota/';
       const pkgs = this._scanPkgs();
       const latest = pkgs.length ? pkgs[pkgs.length - 1] : null;
       const hasNew = !!latest && this._newer(latest, v);
@@ -214,10 +215,10 @@
       const rows = pkgs.length ? pkgs.map((p) => {
         const st = this._newer(p, v) ? '可更新' : (p.major === v.major && p.minor === v.minor && p.build === v.build ? '当前版本' : '旧版本');
         const cls = st === '可更新' ? 'ok' : (st === '当前版本' ? '' : 'warn');
-        return '<div class="st-pkg"><span><span class="pkg-name">' + p.s + '</span> ' +
+        return '<div class="st-pkg"><span><a class="pkg-name" href="' + otaSource + p.s + '" target="_blank" rel="noopener" title="线上下载">' + p.s + '</a> ' +
           '<span class="pkg-ver">v' + p.major + '.' + p.minor + '.' + p.build + '</span> ' +
           '<b class="' + cls + '">' + st + '</b></span></div>';
-      }).join('') : '<div class="st-hint">/sdcard 无更新包。</div>';
+      }).join('') : '<div class="st-hint">线上 ota 源无更新包。</div>';
 
       const action = hasNew
         ? (inRecovery
@@ -231,7 +232,10 @@
         '<div class="st-card"><h3>当前版本</h3>' +
         '<div class="st-ver"><span class="cur">' + curS + '<small>' + (v.codename || '') + '</small></span>' +
         '<span class="tag">' + (hasNew ? '发现新版本 v' + latest.major + '.' + latest.minor + '.' + latest.build : '已是最新') + '</span></div>' +
-        '<h3 style="margin-top:16px">更新包（/sdcard）</h3>' + rows + '</div>' +
+        '<h3 style="margin-top:16px">更新源（线上）</h3>' +
+        '<div class="st-hint">更新包从线上 OTA 源选取：<a href="' + otaSource + '" target="_blank" rel="noopener">' + otaSource + '</a><br/>' +
+        '（非服务器 /ota/ 固定路径，随当前页面路径自适应）</div>' +
+        '<h3 style="margin-top:16px">更新包（点包名跳转线上下载）</h3>' + rows + '</div>' +
         action +
         '<div class="st-hint">安装流程：<code>检查更新 → 重启到 Recovery → 从 /sdcard 应用更新 → 重启系统</code>。' +
         '安装界面在 Recovery 工程模式中提供（仅可升级、不可降级）。</div>';
