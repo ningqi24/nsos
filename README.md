@@ -30,7 +30,9 @@ nsos/
 - **真实设备信息**：`devinfo` 通过 `OS.device`（Battery Status API / 屏幕 / UA / 网络 / 内存 / 触屏等）实时采集，取不到显示"不可用"，不造假
 - **Bootloader 锁定状态**：`fastboot flashing unlock/lock` 结果经 `OS.storage` 持久化，`getvar` / `cat /proc/cmdline` 均反映真实锁定状态；解锁后刷写才被允许
 - **统一进度源**：`shell.updater` 是全局唯一传输会话计时器，刷写 / sideload / OTA 共用，工程模式界面与终端输出同步订阅
-- **轻量 VFS**：`ls` / `cat` 只读 `/system` `/proc` `/sdcard`
+- **真实分区状态（Recovery）**：`/system` `/cache` 挂载状态是真实状态，`mount` / `umount` 驱动，未挂载时 `ls` / `cat` 拒绝访问；`/cache` 会累积真实占用（进入 Recovery 时注入），`wipe cache` 真实清零；`wipe data` 真实清空 `OS.storage` 用户数据（保留 Bootloader 硬件锁定）并重启
+- **真实恢复日志**：Recovery 会话事件实时写入日志，`logcat` 与菜单「查看恢复日志」展示同一份真实记录
+- **轻量 VFS**：`ls` / `cat` / `df` 只读各分区，`/proc/mounts`、`/proc/filesystems` 反映真实挂载
 - **终端 UI**：`os-terminal` Web Component（阴影 DOM），支持命令历史（↑/↓）、流式输出、`clear` 清屏；桌面「终端」应用与工程模式「命令行（Shell）」复用同一组件
 
 ## 特性
@@ -48,7 +50,10 @@ nsos/
 |------|------|
 | `help` / `clear` / `echo` / `version` / `date` / `uname -a` | 基础命令 |
 | `devinfo` | 真实设备信息 |
-| `ls <dir>` / `cat <file>` | 只读虚拟文件系统 |
+| `ls <dir>` / `cat <file>` / `df` | 只读虚拟文件系统（挂载状态真实） |
+| `mount <system|cache>` / `umount <system\|cache>` | 挂载 / 卸载分区（未挂载拒绝访问） |
+| `wipe cache` / `wipe data` | 真实清空缓存 / 用户数据（含二次确认走菜单） |
+| `logcat [-n N]` | 查看 Recovery 真实会话日志 |
 | `reboot [system\|recovery\|fastboot]` | 重启到目标模式 |
 | `fastboot devices` / `getvar all` | 设备 / 变量 |
 | `fastboot flash <part>` / `erase <part>` | 刷写 / 擦除（需解锁） |
