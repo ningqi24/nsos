@@ -19,7 +19,7 @@
         transition: background var(--os-dur-fast, .15s) var(--os-ease-out);
         -webkit-tap-highlight-color: transparent;
       }
-      .track.on { background: var(--os-accent, #3b82f6); border-color: transparent; }
+      .track.on { background: var(--os-accent, #ef9f37); border-color: transparent; }
       .knob {
         position: absolute;
         top: 3px; left: 3px;
