@@ -54,9 +54,24 @@
 .sb-battery i {
   display: block;
   height: 100%;
-  width: 80%;
+  width: 0%;
   background: currentColor;
   border-radius: 1px;
+  transition: width .6s ease;
+}
+.sb-battery.charging i {
+  background: #7dd87d;
+  animation: sb-bat-charge 1.4s ease-in-out infinite alternate;
+}
+@keyframes sb-bat-charge { from { opacity: .55; } to { opacity: 1; } }
+.sb-battery b.sb-bat-pct {
+  font-size: 11px;
+  font-weight: 500;
+  margin-left: 3px;
+  margin-right: 2px;
+  color: currentColor;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 /* ---------- 真锁屏 ---------- */
