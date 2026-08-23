@@ -33,9 +33,9 @@
   const TRANSITIONS = {
     poweroff: { boot: {} },
     boot:     { locked: {}, fastboot: {}, recovery: {} },
-    locked:   { home: {}, poweroff: {} },
-    home:     { app: {}, locked: {}, poweroff: {} },
-    app:      { home: {}, locked: {}, poweroff: {} },
+    locked:   { home: {}, poweroff: {}, boot: {} },
+    home:     { app: {}, locked: {}, poweroff: {}, boot: {}, fastboot: {}, recovery: {} },
+    app:      { home: {}, locked: {}, poweroff: {}, boot: {}, fastboot: {}, recovery: {} },
     fastboot: { recovery: {}, poweroff: {}, boot: {} },
     recovery: { fastboot: {}, poweroff: {}, boot: {} }
   };
