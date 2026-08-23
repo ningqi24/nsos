@@ -81,7 +81,11 @@
     });
 
     const body = win.querySelector('.app-body');
-    if (app.id === 'terminal') {
+    if (app.id === 'settings') {
+      // 真实设置应用（设备信息 + 系统更新），见 js/ui/os-settings.js
+      const st = document.createElement('os-settings');
+      body.appendChild(st);
+    } else if (app.id === 'terminal') {
       const term = document.createElement('os-terminal');
       body.appendChild(term);
       setTimeout(() => { try { term.focus(); } catch (e) {} }, 60);
