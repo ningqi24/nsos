@@ -63,10 +63,36 @@
   };
 
   /* ---------- 桌面交互（P2.4） ---------- */
-  // 点击图标 -> 进入应用层（P5 占位）
+  // 点击图标 -> 进入应用层并渲染应用窗口（终端为真实应用，其余为 P5 占位）
   OS.bus.on('launcher:launch', ({ app }) => {
-    const nameEl = document.getElementById('app-name');
-    if (nameEl) nameEl.textContent = app.name;
+    const host = document.getElementById('app-host');
+    if (host) host.innerHTML = '';
+
+    const win = document.createElement('div');
+    win.className = 'app-window';
+    win.innerHTML =
+      '<div class="app-titlebar">' +
+      '<button class="app-back" type="button" aria-label="返回">‹</button>' +
+      '<span class="app-title"></span>' +
+      '</div><div class="app-body"></div>';
+    win.querySelector('.app-title').textContent = app.name;
+    win.querySelector('.app-back').addEventListener('click', () => {
+      OS.state.transition('home', { source: 'app-back' });
+    });
+
+    const body = win.querySelector('.app-body');
+    if (app.id === 'terminal') {
+      const term = document.createElement('os-terminal');
+      body.appendChild(term);
+      setTimeout(() => { try { term.focus(); } catch (e) {} }, 60);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'app-placeholder';
+      ph.innerHTML = '<div class="ap-name">' + app.name + '</div><p>应用容器建设中（P5）</p>';
+      body.appendChild(ph);
+    }
+
+    if (host) host.appendChild(win);
     OS.state.transition('app', { source: 'launcher', app: app.id });
   });
 
