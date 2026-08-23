@@ -98,8 +98,11 @@
   });
 
   // Bootloader 停留模式（重启到 Bootloader 后）：点击 logo 区域立即正常启动系统
+  // 仅受理真正发生在 layer-bootloader 内部的点击；工程模式菜单（fastboot/recovery）
+  // 中点击项的冒泡事件不得被误判为“点击 logo”，否则会从 Bootloader 直接跳进开机动画。
   document.addEventListener('click', (e) => {
     if (OS.state.current !== 'boot' || BOOT.seq !== 'bootloader' || !BOOT.stayBootloader) return;
+    if (!e.target.closest('#layer-bootloader')) return;
     if (e.target.closest('.boot-key')) return;
     BOOT._runAnimation();
   });
