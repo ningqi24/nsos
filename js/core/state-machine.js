@@ -36,8 +36,8 @@
     locked:   { home: {}, poweroff: {} },
     home:     { app: {}, locked: {}, poweroff: {} },
     app:      { home: {}, locked: {}, poweroff: {} },
-    fastboot: { poweroff: {}, boot: {} },
-    recovery: { poweroff: {}, boot: {} }
+    fastboot: { recovery: {}, poweroff: {}, boot: {} },
+    recovery: { fastboot: {}, poweroff: {}, boot: {} }
   };
 
   class StateMachine {
