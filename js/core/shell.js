@@ -696,7 +696,7 @@
       '/': ['system/', 'proc/', 'sdcard/', 'cache/'],
       '/system': ['version', 'build.prop'],
       '/proc': ['version', 'cmdline', 'uptime', 'filesystems', 'mounts'],
-      '/sdcard': ['nsos-ota-2026-08-23.zip', 'nsos-ota-2026-08-16.zip', 'nsos-ota-bugfix.zip', 'nsos-ota-v0.1.1.zip', 'nsos-ota-v0.1.2.zip', 'nsos-ota-v0.1.3.zip', 'Documents/'],
+      '/sdcard': ['nsos-ota-2026-08-23.zip', 'nsos-ota-2026-08-16.zip', 'nsos-ota-bugfix.zip', 'nsos-ota-v0.1.2.zip', 'nsos-ota-v0.1.3.zip', 'nsos-ota-v0.1.4.zip', 'Documents/'],
       '/sdcard/Documents': ['bootloader-unlock-guide.txt', 'README.txt'],
       '/cache': ['recovery.log']
     },
