@@ -21,6 +21,20 @@
     _outputListeners: new Set(),
     updater: null, // 见下方定义
 
+    // OTA 更新源：线上 ota 目录地址，相对「当前页面路径」动态推导
+    // （如页面部署在 https://<host>/nsos/ 则源为 https://<host>/nsos/ota/）。
+    // 不使用写死的服务器 /ota/，子路径 / 根路径部署均可自适应。
+    otaSource() {
+      try {
+        if (typeof location !== 'undefined' && location.href) {
+          const dir = location.href.slice(0, location.href.lastIndexOf('/') + 1);
+          const u = new URL('ota/', dir);
+          return u.href.endsWith('/') ? u.href : u.href + '/';
+        }
+      } catch (e) { /* 非浏览器环境回退相对路径 */ }
+      return 'ota/';
+    },
+
     // 环境变量（真实持久化到 OS.storage，export/unset 可改）
     env: Object.assign({
       PATH: '/bin:/sbin',
@@ -545,10 +559,11 @@
 
   SHELL.register({
     name: 'ota',
-    desc: '系统更新（check / list / apply，真实读取 /sdcard 更新包）',
-    usage: 'ota check | ota list | ota apply <package.zip>',
+    desc: '系统更新（check / list / apply，更新源为线上 https://当前路径/ota/，真实读取 /sdcard 更新包）',
+    usage: 'ota check | ota list | ota source | ota apply <package.zip>',
     run(ctx) {
       const sub = (ctx.args[1] || 'check').toLowerCase();
+      const source = SHELL.otaSource();
       const parseV = (name) => {
         const m = /^nsos-ota-v?(\d+)\.(\d+)\.(\d+)\.zip$/.exec(name);
         return m ? { major: +m[1], minor: +m[2], build: +m[3], s: name } : null;
@@ -560,16 +575,24 @@
       const pkgs = sdcard.map(parseV).filter(Boolean).sort((a, b) => a.major - b.major || a.minor - b.minor || a.build - b.build);
 
       if (sub === 'list') {
+        ctx.push(ctx.line('OTA 源: ' + source + '  （线上 https://当前路径/ota/）', K.sys));
         if (!pkgs.length) { ctx.push(ctx.line('ota: /sdcard 无更新包', K.out)); return; }
-        pkgs.forEach(p => ctx.push(ctx.line(p.s + '   v' + p.major + '.' + p.minor + '.' + p.build, K.out)));
+        pkgs.forEach(p => ctx.push(ctx.line(p.s + '   v' + p.major + '.' + p.minor + '.' + p.build + '  →  ' + source + p.s, K.out)));
+        return;
+      }
+      if (sub === 'source') {
+        ctx.push(ctx.line('OTA 源（线上）: ' + source, K.ok));
+        ctx.push(ctx.line('说明: 更新包从线上 ota 目录选取，非服务器 /ota/ 固定路径。', K.out));
         return;
       }
       if (sub === 'check') {
-        if (!pkgs.length) { ctx.push(ctx.line('ota: /sdcard 无更新包', K.out)); return; }
+        ctx.push(ctx.line('OTA 源: ' + source + '  （线上 https://当前路径/ota/）', K.sys));
+        if (!pkgs.length) { ctx.push(ctx.line('ota: 线上 ota 源无更新包 / /sdcard 无更新包', K.out)); return; }
         const latest = pkgs[pkgs.length - 1];
         const cur = OS.version;
         if (newerThan(latest, cur)) {
           ctx.push(ctx.line(`发现新版本 v${latest.major}.${latest.minor}.${latest.build}（当前 v${cur.major}.${cur.minor}.${cur.build}）`, K.warn));
+          ctx.push(ctx.line('可下载: ' + source + latest.s, K.out));
           ctx.push(ctx.line('可执行: ota apply ' + latest.s + '  （刷写需先 reboot recovery）', K.out));
         } else {
           ctx.push(ctx.line(`已是最新版本 v${cur.major}.${cur.minor}.${cur.build}`, K.ok));
@@ -696,7 +719,7 @@
       '/': ['system/', 'proc/', 'sdcard/', 'cache/'],
       '/system': ['version', 'build.prop'],
       '/proc': ['version', 'cmdline', 'uptime', 'filesystems', 'mounts'],
-      '/sdcard': ['nsos-ota-2026-08-23.zip', 'nsos-ota-2026-08-16.zip', 'nsos-ota-bugfix.zip', 'nsos-ota-v0.1.2.zip', 'nsos-ota-v0.1.3.zip', 'nsos-ota-v0.1.4.zip', 'Documents/'],
+      '/sdcard': ['nsos-ota-2026-08-23.zip', 'nsos-ota-2026-08-16.zip', 'nsos-ota-bugfix.zip', 'nsos-ota-v0.1.3.zip', 'nsos-ota-v0.1.4.zip', 'nsos-ota-v0.1.5.zip', 'Documents/'],
       '/sdcard/Documents': ['bootloader-unlock-guide.txt', 'README.txt'],
       '/cache': ['recovery.log']
     },
