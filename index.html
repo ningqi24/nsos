@@ -8,9 +8,9 @@
   <link rel="stylesheet" href="css/tokens.css?v=5">
   <link rel="stylesheet" href="css/layers.css?v=6">
   <link rel="stylesheet" href="css/boot.css?v=11">
-  <link rel="stylesheet" href="css/desktop.css?v=7">
+  <link rel="stylesheet" href="css/desktop.css?v=8">
   <link rel="stylesheet" href="css/system-fix.css?v=5">
-  <link rel="stylesheet" href="css/terminal.css?v=1">
+  <link rel="stylesheet" href="css/terminal.css?v=2">
 </head>
 <body>
   <!-- 系统渲染根：所有 Layer 挂载于此 -->
@@ -50,7 +50,7 @@
 
     <!-- 工程模式层 -->
     <section id="layer-fastboot"    class="os-layer" data-state="fastboot" hidden>
-      <div class="ft-head"><span>FASTBOOT MODE</span><span class="ft-ver">nsos b0.1.8</span></div>
+      <div class="ft-head"><span>FASTBOOT MODE</span><span class="ft-ver">nsos b0.1.9</span></div>
       <ul class="ft-menu" id="ft-menu"></ul>
       <div class="ft-foot">↑/↓ 选择 · Enter 确认 · 数字键快捷选择</div>
     </section>
@@ -98,7 +98,10 @@
   <script src="js/core/core.js?v=7"></script>
   <script src="js/core/device.js?v=2"></script>
   <script src="js/core/shell.js?v=3"></script>
-  <script src="js/main.js?v=7"></script>
+  <script src="js/main.js?v=8"></script>
+  <!-- P4 应用体系：注册表 + 导航（依赖 main.js 的 OS.state，必须在其后加载） -->
+  <script src="js/core/app-registry.js?v=1"></script>
+  <script src="js/core/navigation.js?v=1"></script>
   <!-- 组件代码库（P4 铺垫 · Web Components，框架无关） -->
   <script src="js/ui/os-icon.js?v=5"></script>
   <script src="js/ui/os-button.js?v=5"></script>
@@ -109,6 +112,8 @@
   <script src="js/ui/os-toast.js?v=5"></script>
   <script src="js/ui/os-terminal.js?v=1"></script>
   <script src="js/ui/os-settings.js?v=2"></script>
+  <!-- 内置应用 manifest（对标 MobileGym apps/ 目录，依赖 OS.apps 与 Web Component） -->
+  <script src="js/apps/builtin-apps.js?v=1"></script>
   <!-- 启动链模块（P1） -->
   <script src="js/boot/ota-local.js?v=1"></script>
   <script src="js/boot/input.js?v=5"></script>
@@ -117,7 +122,7 @@
   <script src="js/boot/locked.js?v=7"></script>
   <!-- 桌面层模块（P2/P3） -->
   <script src="js/desktop/statusbar.js?v=6"></script>
-  <script src="js/desktop/launcher.js?v=5"></script>
+  <script src="js/desktop/launcher.js?v=6"></script>
   <script src="js/desktop/notifications.js?v=5"></script>
   <script src="js/desktop/control-center.js?v=5"></script>
   <script src="js/desktop/gestures.js?v=5"></script>
