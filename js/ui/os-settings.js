@@ -231,7 +231,7 @@
       this._update.innerHTML =
         '<div class="st-card"><h3>当前版本</h3>' +
         '<div class="st-ver"><span class="cur">' + curS + '<small>' + (v.codename || '') + '</small></span>' +
-        '<span class="tag">' + (hasNew ? '发现新版本 v' + latest.major + '.' + latest.minor + '.' + latest.build : '已是最新') + '</span></div>' +
+        '<span class="tag">' + (hasNew ? '可更新' : '已是最新版本') + '</span></div>' +
         '<h3 style="margin-top:16px">更新源（线上）</h3>' +
         '<div class="st-hint">更新包从线上 OTA 源选取：<a href="' + otaSource + '" target="_blank" rel="noopener">' + otaSource + '</a><br/>' +
         '（非服务器 /ota/ 固定路径，随当前页面路径自适应）</div>' +
