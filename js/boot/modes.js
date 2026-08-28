@@ -364,9 +364,9 @@
       const shell = OS.shell;
       if (!shell || !shell.VFS) { this._toast('shell 不可用', 'error'); return; }
       const v = OS.version || {};
-      const curS = (v.major != null) ? 'v' + v.major + '.' + v.minor + '.' + v.build : '?';
+      const curS = (v.major != null) ? 'b' + v.major + '.' + v.minor + '.' + v.build : '?';
       const parseV = (name) => {
-        const m = /^nsos-ota-v?(\d+)\.(\d+)\.(\d+)\.zip$/.exec(name);
+        const m = /^nsos-ota-[vb]?(\d+)\.(\d+)\.(\d+)\.zip$/.exec(name);
         return m ? { major: +m[1], minor: +m[2], build: +m[3], s: name } : null;
       };
       const newer = (a, b) => a.major > b.major ||
