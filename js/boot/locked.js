@@ -1,9 +1,10 @@
 /* ============================================================
- * nsos - locked.js (P2.1)
+ * nsos - locked.js (P2.1 · P6 增强)
  * 真锁屏：大字时钟 + 日期 + 上滑手势解锁。
- *   - 仅上滑可解锁（阈值 THRESHOLD），点击/点按不触发任何跳转；
- *   - 拖拽跟手 + 未达阈值自动回弹；
- *   - 解锁带整层上移淡出过渡，避免"点击即进桌面"无间隔。
+ *   - 上滑解锁（阈值 THRESHOLD），拖拽跟手 + 未达阈值自动回弹；
+ *   - 键盘解锁：Enter / Space / 任意方向上键
+ *   - 双击底部快捷区也可解锁（辅助）
+ *   - 解锁带整层上移淡出过渡
  * ============================================================ */
 (function (global) {
   'use strict';
@@ -11,9 +12,9 @@
   const OS = global.OS;
 
   const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
-  const THRESHOLD = 96;      // 上滑解锁阈值（px）
-  const RUBBER = 0.55;       // 拖拽阻尼系数（跟手感）
-  const ANIM_MS = 460;       // 解锁过渡时长（ms）
+  const THRESHOLD = 80;      // 上滑解锁阈值（px），降低阈值更容易解锁
+  const RUBBER = 0.6;        // 拖拽阻尼系数（跟手感）
+  const ANIM_MS = 420;       // 解锁过渡时长（ms）
 
   OS.reg('locked', {
     layer: null,
@@ -21,8 +22,11 @@
     timeEl: null,
     dateEl: null,
     _startY: null,
+    _startX: null,
+    _lastY: null,
     _tracking: false,
     _unlocking: false,
+    _maxPull: 0,
 
     init() {
       this.layer = document.getElementById('layer-locked');
@@ -32,14 +36,21 @@
       this.dateEl = this.layer.querySelector('#lock-date');
       this.notifsEl = this.layer.querySelector('#lock-notifs');
 
+      // 确保锁屏层高优先级接收事件
+      this.layer.style.zIndex = '100';
+      this.layer.style.touchAction = 'none';
+
       this._buildShortcuts();
       this._render();
       this._renderNotifs();
       this._scheduleTick();
       this._bind();
 
-      // 进入锁屏时刷新通知
-      OS.bus.on('state:enter:locked', () => this._renderNotifs());
+      // 进入锁屏时刷新通知 + 重置状态
+      OS.bus.on('state:enter:locked', () => {
+        this._renderNotifs();
+        this._reset();
+      });
       OS.bus.on('notify:post', () => { if (OS.state.current === 'locked') this._renderNotifs(); });
       OS.bus.on('notify:change', () => { if (OS.state.current === 'locked') this._renderNotifs(); });
     },
@@ -116,41 +127,122 @@
 
     _bind() {
       const layer = this.layer;
+      const self = this;
 
+      // 指针按下
       layer.addEventListener('pointerdown', (e) => {
-        if (this._unlocking || OS.state.current !== 'locked') return;
-        this._startY = e.clientY;
-        this._lastY = e.clientY;
-        this._tracking = true;
+        if (self._unlocking || OS.state.current !== 'locked') return;
+        self._startY = e.clientY;
+        self._startX = e.clientX;
+        self._lastY = e.clientY;
+        self._tracking = true;
+        self._maxPull = 0;
         try { layer.setPointerCapture(e.pointerId); } catch (err) { /* 非关键 */ }
       });
 
+      // 指针移动
       layer.addEventListener('pointermove', (e) => {
-        if (!this._tracking || this._startY === null) return;
-        if (this._unlocking || OS.state.current !== 'locked') return;
-        const dy = this._startY - e.clientY;      // 向上为正
-        if (dy > this._maxPull) this._maxPull = dy;
+        if (!self._tracking || self._startY === null) return;
+        if (self._unlocking || OS.state.current !== 'locked') return;
+        const dy = self._startY - e.clientY;      // 向上为正
+        const dx = Math.abs(e.clientX - self._startX);
+        // 水平移动超过垂直移动，可能是左右滑动，忽略
+        if (dx > Math.abs(dy) * 1.5 && self._maxPull < 20) return;
+        if (dy > self._maxPull) self._maxPull = dy;
         const pull = dy > 0 ? dy * RUBBER : 0;    // 仅上滑跟手，下滑忽略
-        this._lastY = e.clientY;
-        if (this.content) this.content.style.transform = `translateY(${-pull}px)`;
+        self._lastY = e.clientY;
+        if (self.content) self.content.style.transform = `translateY(${-pull}px)`;
       });
 
-      layer.addEventListener('pointerup', () => {
-        if (!this._tracking) return;
-        this._tracking = false;
-        const dy = this._startY === null ? 0 : this._startY - (this._lastY || 0);
-        const maxPull = this._maxPull || dy;
-        this._startY = null;
-        this._maxPull = 0;
-        if (maxPull > THRESHOLD) { this._unlock(); return; }
-        this._bounceBack();      // 未达阈值：回弹，不解锁
+      // 指针抬起
+      layer.addEventListener('pointerup', (e) => {
+        if (!self._tracking) return;
+        self._tracking = false;
+        const dy = self._startY === null ? 0 : self._startY - (self._lastY || 0);
+        const maxPull = self._maxPull || dy;
+        self._startY = null;
+        self._startX = null;
+        self._maxPull = 0;
+        if (maxPull > THRESHOLD) { self._unlock(); return; }
+        self._bounceBack();      // 未达阈值：回弹，不解锁
       });
 
       layer.addEventListener('pointercancel', () => {
-        this._tracking = false;
-        this._startY = null;
-        this._maxPull = 0;
-        this._bounceBack();
+        self._tracking = false;
+        self._startY = null;
+        self._startX = null;
+        self._maxPull = 0;
+        self._bounceBack();
+      });
+
+      // 键盘解锁：Enter / Space / ArrowUp
+      document.addEventListener('keydown', (e) => {
+        if (OS.state.current !== 'locked') return;
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          self._unlock();
+        }
+      });
+
+      // 点击时间区域也可解锁（辅助方式，避免用户困惑）
+      const timeEl = layer.querySelector('.lock-time');
+      if (timeEl) {
+        let lastTap = 0;
+        timeEl.style.cursor = 'pointer';
+        timeEl.addEventListener('click', () => {
+          const now = Date.now();
+          if (now - lastTap < 400) {
+            // 双击时间解锁
+            self._unlock();
+          }
+          lastTap = now;
+        });
+      }
+
+      // 底部小横条上滑提示增强：点击小横条也可解锁
+      const grip = layer.querySelector('.lock-grip');
+      if (grip) {
+        grip.style.cursor = 'pointer';
+        grip.addEventListener('click', () => self._unlock());
+      }
+
+      // 在 document 级别也监听上滑手势（防止被 sysui 子元素阻挡）
+      let docStartY = null, docStartX = null, docTracking = false, docMaxPull = 0;
+      document.addEventListener('pointerdown', (e) => {
+        if (OS.state.current !== 'locked' || self._unlocking) return;
+        // 只监听从下半屏开始的滑动（更符合上滑解锁的直觉）
+        if (e.clientY < window.innerHeight * 0.3) return;
+        docStartY = e.clientY;
+        docStartX = e.clientX;
+        docTracking = true;
+        docMaxPull = 0;
+      });
+      document.addEventListener('pointermove', (e) => {
+        if (!docTracking || docStartY === null) return;
+        if (OS.state.current !== 'locked' || self._unlocking) return;
+        const dy = docStartY - e.clientY;
+        const dx = Math.abs(e.clientX - docStartX);
+        if (dx > Math.abs(dy) * 1.5 && docMaxPull < 20) return;
+        if (dy > docMaxPull) docMaxPull = dy;
+        const pull = dy > 0 ? dy * RUBBER : 0;
+        if (self.content) self.content.style.transform = `translateY(${-pull}px)`;
+      });
+      document.addEventListener('pointerup', () => {
+        if (!docTracking) return;
+        docTracking = false;
+        const maxPull = docMaxPull;
+        docStartY = null;
+        docStartX = null;
+        docMaxPull = 0;
+        if (maxPull > THRESHOLD) { self._unlock(); return; }
+        self._bounceBack();
+      });
+      document.addEventListener('pointercancel', () => {
+        docTracking = false;
+        docStartY = null;
+        docStartX = null;
+        docMaxPull = 0;
+        self._bounceBack();
       });
     },
 
