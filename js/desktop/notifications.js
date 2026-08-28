@@ -96,7 +96,7 @@
       const last = OS.storage.get('notif:demo', 0);
       if (now - last < 60000) return;
       OS.storage.set('notif:demo', now);
-      this.post({ icon: 'wifi', title: '系统更新完成', text: 'nsos b0.1.8 已就绪，开机画面已焕新', app: 'system' });
+      this.post({ icon: 'wifi', title: '系统更新完成', text: 'nsos b0.1.9 已就绪，应用体系全面升级', app: 'system' });
       this.post({ icon: 'messages', title: '通知中心上线', text: '下拉状态栏查看通知与快捷开关', app: 'system' });
       this.post({ icon: 'bell', title: '欢迎使用 nsos', text: '上滑返回桌面 · 边缘滑动返回', app: 'system' });
     }
