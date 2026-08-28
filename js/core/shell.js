@@ -591,7 +591,7 @@
         const latest = pkgs[pkgs.length - 1];
         const cur = OS.version;
         if (newerThan(latest, cur)) {
-          ctx.push(ctx.line(`发现新版本 v${latest.major}.${latest.minor}.${latest.build}（当前 v${cur.major}.${cur.minor}.${cur.build}）`, K.warn));
+          ctx.push(ctx.line(`可更新: v${latest.major}.${latest.minor}.${latest.build}（当前 v${cur.major}.${cur.minor}.${cur.build}）`, K.warn));
           ctx.push(ctx.line('可下载: ' + source + latest.s, K.out));
           ctx.push(ctx.line('可执行: ota apply ' + latest.s + '  （刷写需先 reboot recovery）', K.out));
         } else {
