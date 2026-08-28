@@ -740,7 +740,7 @@
       '/': ['system/', 'proc/', 'sdcard/', 'cache/'],
       '/system': ['version', 'build.prop'],
       '/proc': ['version', 'cmdline', 'uptime', 'filesystems', 'mounts'],
-      '/sdcard': ['nsos-ota-b0.1.8.zip', 'Documents/'],
+      '/sdcard': ['nsos-ota-b0.1.9.zip', 'Documents/'],
       '/sdcard/Documents': ['bootloader-unlock-guide.txt', 'README.txt'],
       '/cache': ['recovery.log']
     },
