@@ -198,6 +198,23 @@
 }
 .app-placeholder .ap-name { font-size: 20px; margin-bottom: 10px; color: var(--os-fg-0); }
 
+/* ---------- 时钟应用（manifest 真实应用） ---------- */
+.app-clock {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 6px;
+  background: radial-gradient(circle at 50% 30%, rgba(63,123,255,.16), transparent 60%), #0c0f1e;
+  color: var(--os-fg-0);
+}
+.app-clock .ck-time {
+  font-size: 64px; font-weight: 700; letter-spacing: 2px;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 28px rgba(63,123,255,.45);
+}
+.app-clock .ck-date { font-size: 16px; color: var(--os-fg-1); }
+.app-clock .ck-sub { margin-top: 18px; font-size: 11px; color: var(--os-fg-2); opacity: .7; }
+
 /* ============================================================
  * P3 系统服务视觉：控制中心 / 通知 / 状态栏铃铛
  * ============================================================ */
