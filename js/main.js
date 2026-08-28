@@ -62,42 +62,15 @@
     jump: (s) => OS.state.transition(s, { source: 'debug' })
   };
 
-  /* ---------- 桌面交互（P2.4） ---------- */
-  // 点击图标 -> 进入应用层并渲染应用窗口（终端为真实应用，其余为 P5 占位）
+  /* ---------- 桌面交互（P2.4 · P4 导航化） ---------- */
+  // 点击图标 -> 进入应用任务栈（窗口 / 标题栏 / 挂载由 OS.nav 统一处理，
+  // 应用定义见 js/apps/builtin-apps.js 的 manifest，与内核零耦合）
   OS.bus.on('launcher:launch', ({ app }) => {
-    const host = document.getElementById('app-host');
-    if (host) host.innerHTML = '';
-
-    const win = document.createElement('div');
-    win.className = 'app-window';
-    win.innerHTML =
-      '<div class="app-titlebar">' +
-      '<button class="app-back" type="button" aria-label="返回">‹</button>' +
-      '<span class="app-title"></span>' +
-      '</div><div class="app-body"></div>';
-    win.querySelector('.app-title').textContent = app.name;
-    win.querySelector('.app-back').addEventListener('click', () => {
-      OS.state.transition('home', { source: 'app-back' });
-    });
-
-    const body = win.querySelector('.app-body');
-    if (app.id === 'settings') {
-      // 真实设置应用（设备信息 + 系统更新），见 js/ui/os-settings.js
-      const st = document.createElement('os-settings');
-      body.appendChild(st);
-    } else if (app.id === 'terminal') {
-      const term = document.createElement('os-terminal');
-      body.appendChild(term);
-      setTimeout(() => { try { term.focus(); } catch (e) {} }, 60);
-    } else {
-      const ph = document.createElement('div');
-      ph.className = 'app-placeholder';
-      ph.innerHTML = '<div class="ap-name">' + app.name + '</div><p>应用容器建设中（P5）</p>';
-      body.appendChild(ph);
+    if (OS.nav && OS.nav.push) {
+      OS.nav.push(app.id);
+      return;
     }
-
-    if (host) host.appendChild(win);
-    OS.state.transition('app', { source: 'launcher', app: app.id });
+    console.warn('[main] OS.nav 未就绪，忽略启动', app.id);
   });
 
   // 双击状态栏 -> 锁定回锁屏（演示用，后续换手势）
