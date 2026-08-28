@@ -147,7 +147,7 @@
     _renderAbout() {
       const d = (OS.device && OS.device.info) || {};
       const v = OS.version || {};
-      const verTxt = (v.major != null) ? 'v' + v.major + '.' + v.minor + '.' + v.build : '不可用';
+      const verTxt = (v.major != null) ? 'b' + v.major + '.' + v.minor + '.' + v.build : '不可用';
       const rows = [
         ['系统版本', verTxt + ' "' + (v.codename || '') + '"'],
         ['Bootloader', (OS.shell && OS.shell.locked ? (OS.shell.locked() ? 'locked' : 'unlocked') : '不可用')],
@@ -189,7 +189,7 @@
 
     /* ---- 系统更新页：真实扫描 /sdcard OTA 包并对比版本 ---- */
     _parseV(name) {
-      const m = /^nsos-ota-v?(\d+)\.(\d+)\.(\d+)\.zip$/.exec(name);
+      const m = /^nsos-ota-[vb]?(\d+)\.(\d+)\.(\d+)\.zip$/.exec(name);
       return m ? { major: +m[1], minor: +m[2], build: +m[3], s: name } : null;
     }
     _newer(a, b) {
@@ -205,7 +205,7 @@
 
     _renderUpdate() {
       const v = OS.version || {};
-      const curS = (v.major != null) ? 'v' + v.major + '.' + v.minor + '.' + v.build : '?';
+      const curS = (v.major != null) ? 'b' + v.major + '.' + v.minor + '.' + v.build : '?';
       const otaSource = (OS.shell && OS.shell.otaSource) ? OS.shell.otaSource() : 'ota/';
       const pkgs = this._scanPkgs();
       const latest = pkgs.length ? pkgs[pkgs.length - 1] : null;
@@ -228,6 +228,30 @@
             ? '<button class="st-btn ghost disabled" type="button" disabled>已是最新版本</button>'
             : '<button class="st-btn ghost disabled" type="button" disabled>暂无更新包</button>');
 
+      /* ---- 本地缓存更新（PWA 离线缓存 · OTA 替换缓存，可升级/降级） ---- */
+      const local = OS.ota && OS.ota.local;
+      const lcVer = local ? (local.cachedVersion() || '—') : '—';
+      let lcCard = '';
+      if (local) {
+        const lcPkgRows = pkgs.length
+          ? pkgs.map((p) =>
+              '<div class="st-pkg"><span><span class="pkg-name">' + p.s + '</span> ' +
+              '<span class="pkg-ver">v' + p.major + '.' + p.minor + '.' + p.build + '</span></span>' +
+              '<button data-lc-url="' + otaSource + p.s + '" data-lc-name="' + p.s + '" type="button">下载应用</button></div>'
+            ).join('')
+          : '<div class="st-hint">当前无可用 OTA 包，可改用「选择本地 OTA 包」。</div>';
+        lcCard =
+          '<div class="st-card"><h3>本地缓存更新（离线缓存）</h3>' +
+          '<div class="st-row"><span>本地缓存版本</span><b data-lc-ver>' + lcVer + '</b></div>' +
+          '<div class="st-row"><span>缓存策略</span><b>首次全量缓存 · 之后只读缓存</b></div>' +
+          '<div class="st-row"><span>支持</span><b>' + (local.supported() ? 'Service Worker 可用' : '不可用（需 HTTPS）') + '</b></div>' +
+          '<h3 style="margin-top:14px">线上 OTA 包（下载并替换本地缓存，可升级或降级）</h3>' + lcPkgRows +
+          '<button class="st-btn ghost" data-local-file type="button" style="margin-top:12px">选择本地 OTA 包（更新 / 降级）</button>' +
+          '<input type="file" data-local-input accept=".zip" hidden>' +
+          '<div class="st-hint">缓存版本 ' + lcVer + '，系统版本 ' + curS + '。应用 OTA 包后本地缓存被整体替换，' +
+          '<code>自动刷新</code> 生效。导入旧包即可降级。</div></div>';
+      }
+
       this._update.innerHTML =
         '<div class="st-card"><h3>当前版本</h3>' +
         '<div class="st-ver"><span class="cur">' + curS + '<small>' + (v.codename || '') + '</small></span>' +
@@ -238,10 +262,42 @@
         '<h3 style="margin-top:16px">更新包（点包名跳转线上下载）</h3>' + rows + '</div>' +
         action +
         '<div class="st-hint">安装流程：<code>检查更新 → 重启到 Recovery → 从 /sdcard 应用更新 → 重启系统</code>。' +
-        '安装界面在 Recovery 工程模式中提供（仅可升级、不可降级）。</div>';
+        '安装界面在 Recovery 工程模式中提供（仅可升级、不可降级）。</div>' +
+        lcCard;
 
       const btn = this._update.querySelector('[data-torecovery]');
       if (btn) btn.addEventListener('click', () => this._goRecovery());
+
+      /* ---- 本地缓存更新事件绑定 ---- */
+      const lv = this._update.querySelector('[data-lc-ver]');
+      const lcApply = (promise, name) => {
+        promise
+          .then((r) => {
+            if (lv) lv.textContent = r.ver;
+            if (OS.ui && OS.ui.toast) OS.ui.toast('已应用 ' + (r.ver || name) + '，正在刷新…', { type: 'success', ms: 1500 });
+            setTimeout(() => location.reload(), 900);
+          })
+          .catch((e) => {
+            if (OS.ui && OS.ui.toast) OS.ui.toast('应用失败：' + (e && e.message ? e.message : e), { type: 'danger', ms: 2800 });
+          });
+      };
+      this._update.querySelectorAll('[data-lc-url]').forEach((b) => {
+        b.addEventListener('click', () => {
+          const url = b.getAttribute('data-lc-url');
+          const name = b.getAttribute('data-lc-name') || url;
+          lcApply(local.applyFromUrl(url), name);
+        });
+      });
+      const lcFileBtn = this._update.querySelector('[data-local-file]');
+      const lcInput = this._update.querySelector('[data-local-input]');
+      if (lcFileBtn && lcInput) {
+        lcFileBtn.addEventListener('click', () => lcInput.click());
+        lcInput.addEventListener('change', () => {
+          const f = lcInput.files && lcInput.files[0];
+          if (f) lcApply(local.applyFromFile(f), f.name);
+          lcInput.value = '';
+        });
+      }
     }
 
     _goRecovery() {
