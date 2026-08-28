@@ -553,19 +553,19 @@
     usage: 'version',
     run(ctx) {
       const v = OS.version;
-      ctx.push(ctx.line(`nsos v${v.major}.${v.minor}.${v.build} "${v.codename}"`, K.ok));
+      ctx.push(ctx.line(`nsos b${v.major}.${v.minor}.${v.build} "${v.codename}"`, K.ok));
     }
   });
 
   SHELL.register({
     name: 'ota',
-    desc: '系统更新（check / list / apply，更新源为线上 https://当前路径/ota/，真实读取 /sdcard 更新包）',
-    usage: 'ota check | ota list | ota source | ota apply <package.zip>',
+    desc: '系统更新（check / list / apply / cache，更新源为线上 https://当前路径/ota/；cache 为浏览器本地缓存更新）',
+    usage: 'ota check | ota list | ota source | ota apply <package.zip> | ota cache [apply <url>]',
     run(ctx) {
       const sub = (ctx.args[1] || 'check').toLowerCase();
       const source = SHELL.otaSource();
       const parseV = (name) => {
-        const m = /^nsos-ota-v?(\d+)\.(\d+)\.(\d+)\.zip$/.exec(name);
+        const m = /^nsos-ota-[vb]?(\d+)\.(\d+)\.(\d+)\.zip$/.exec(name);
         return m ? { major: +m[1], minor: +m[2], build: +m[3], s: name } : null;
       };
       const newerThan = (a, b) => a.major > b.major ||
@@ -597,6 +597,27 @@
         } else {
           ctx.push(ctx.line(`已是最新版本 v${cur.major}.${cur.minor}.${cur.build}`, K.ok));
         }
+        return;
+      }
+      if (sub === 'cache') {
+        const local = OS.ota && OS.ota.local;
+        if (!local) { ctx.push(ctx.line('ota cache: 当前环境不支持 Service Worker / Cache API', K.err)); return; }
+        if (ctx.args[2] === 'apply') {
+          const url = ctx.args[3];
+          if (!url) { ctx.push(ctx.line('usage: ota cache apply <http.../xxx.zip>', K.err)); return; }
+          ctx.push(ctx.line('从线上获取 OTA 包并替换本地缓存（可升级 / 降级）...', K.out));
+          local.applyFromUrl(url).then((r) => {
+            ctx.push(ctx.line('已应用 ' + r.ver + '（' + r.fileCount + ' 个文件），刷新页面生效', K.ok));
+          }).catch((e) => {
+            ctx.push(ctx.line('应用失败: ' + (e && e.message ? e.message : e), K.err));
+          });
+          return;
+        }
+        ctx.push(ctx.line('本地缓存版本: ' + (local.cachedVersion() || '未初始化'), K.out));
+        ctx.push(ctx.line('支持: ' + (local.supported() ? '是（Service Worker 可用）' : '否（需 HTTPS）'), K.out));
+        local.precacheReady().then((ready) => {
+          ctx.push(ctx.line('离线缓存就绪: ' + (ready ? '是（cache-first 只读缓存）' : '否（首次全量缓存进行中）'), K.ok));
+        });
         return;
       }
       if (sub === 'apply') {
@@ -719,7 +740,7 @@
       '/': ['system/', 'proc/', 'sdcard/', 'cache/'],
       '/system': ['version', 'build.prop'],
       '/proc': ['version', 'cmdline', 'uptime', 'filesystems', 'mounts'],
-      '/sdcard': ['nsos-ota-2026-08-23.zip', 'nsos-ota-2026-08-16.zip', 'nsos-ota-bugfix.zip', 'nsos-ota-v0.1.4.zip', 'nsos-ota-v0.1.5.zip', 'nsos-ota-v0.1.6.zip', 'Documents/'],
+      '/sdcard': ['nsos-ota-b0.1.8.zip', 'Documents/'],
       '/sdcard/Documents': ['bootloader-unlock-guide.txt', 'README.txt'],
       '/cache': ['recovery.log']
     },
