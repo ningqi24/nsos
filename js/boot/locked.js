@@ -30,10 +30,48 @@
       this.content = this.layer.querySelector('.lock-content');
       this.timeEl = this.layer.querySelector('.lock-time');
       this.dateEl = this.layer.querySelector('#lock-date');
+      this.notifsEl = this.layer.querySelector('#lock-notifs');
 
+      this._buildShortcuts();
       this._render();
+      this._renderNotifs();
       this._scheduleTick();
       this._bind();
+
+      // 进入锁屏时刷新通知
+      OS.bus.on('state:enter:locked', () => this._renderNotifs());
+      OS.bus.on('notify:post', () => { if (OS.state.current === 'locked') this._renderNotifs(); });
+      OS.bus.on('notify:change', () => { if (OS.state.current === 'locked') this._renderNotifs(); });
+    },
+
+    /* 锁屏底部快捷按钮：手电筒 + 相机（iOS 风格） */
+    _buildShortcuts() {
+      if (this.layer.querySelector('.lock-shortcuts')) return;
+      const bar = document.createElement('div');
+      bar.className = 'lock-shortcuts';
+      bar.innerHTML = `
+        <button class="lock-sc-btn lock-sc-torch" id="lock-torch">
+          <os-icon name="torch" size="20"></os-icon>
+        </button>
+        <button class="lock-sc-btn lock-sc-camera" id="lock-cam">
+          <os-icon name="camera" size="20"></os-icon>
+        </button>`;
+      this.layer.appendChild(bar);
+      bar.querySelector('#lock-torch').addEventListener('click', () => {
+        const toast = OS.ui && OS.ui.toast;
+        if (toast) toast('手电筒已开启', { ms: 1200 });
+      });
+      bar.querySelector('#lock-cam').addEventListener('click', () => {
+        this._unlockToApp('camera2');
+      });
+    },
+
+    /* 快捷解锁并进入指定应用 */
+    _unlockToApp(appId) {
+      this._unlock();
+      setTimeout(() => {
+        if (OS.apps.has(appId)) OS.nav.push(appId);
+      }, ANIM_MS + 100);
     },
 
     /* 对齐到下一分钟整点再刷新，避免分钟显示滞后最多 30s */
@@ -55,6 +93,25 @@
         `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
       this.dateEl.textContent =
         `nsos · 周${WEEK[d.getDay()]} ${d.getMonth() + 1}月${d.getDate()}日`;
+    },
+
+    /* 渲染锁屏通知 */
+    _renderNotifs() {
+      if (!this.notifsEl) return;
+      const items = (OS.notify && OS.notify.items) || [];
+      if (items.length === 0) {
+        this.notifsEl.innerHTML = '';
+        this.notifsEl.style.display = 'none';
+        return;
+      }
+      this.notifsEl.style.display = 'flex';
+      this.notifsEl.innerHTML = '';
+      items.slice(0, 3).forEach(n => {
+        const el = document.createElement('div');
+        el.className = 'lock-notif';
+        el.innerHTML = `<span class="ln-ic"><os-icon name="${n.icon || 'bell'}" size="14"></os-icon></span><div class="ln-body"><div class="ln-title">${n.title}</div><div class="ln-text">${n.text}</div></div>`;
+        this.notifsEl.appendChild(el);
+      });
     },
 
     _bind() {

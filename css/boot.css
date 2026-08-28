@@ -9,7 +9,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--os-bg-0);
+  background:
+    radial-gradient(circle at 50% 40%, rgba(239,159,55,.06), transparent 50%),
+    var(--os-bg-0);
 }
 .boot-logo-wrap { text-align: center; margin-top: -4vh; }
 .boot-mascot {
@@ -17,7 +19,7 @@
   width: 84px; height: 84px;
   margin: 0 auto 14px;
   filter: drop-shadow(0 0 16px rgba(239,159,55,.4)) drop-shadow(0 0 46px rgba(239,159,55,.16));
-  animation: boot-mascot-in 1s var(--os-ease-out) both;
+  animation: boot-mascot-in 1s var(--os-ease-spring) both;
 }
 .boot-logo {
   font-size: 34px;
@@ -123,13 +125,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--os-bg-0);
+  background:
+    radial-gradient(circle at 50% 45%, rgba(239,159,55,.05), transparent 55%),
+    var(--os-bg-0);
 }
 .boot-anim-wrap { display: flex; flex-direction: column; align-items: center; }
 .boot-anim-ring {
   width: 84px; height: 84px;
   border-radius: 50%;
-  border: 3px solid rgba(255,255,255,.08);
+  border: 3px solid rgba(255,255,255,.06);
   border-top-color: var(--os-accent);
   box-shadow: 0 0 22px rgba(239,159,55,.14);
   animation: os-spin 1s linear infinite;
@@ -139,13 +143,14 @@
   width: 220px; height: 3px;
   margin-top: 42px;
   border-radius: 2px;
-  background: rgba(255,255,255,.1);
+  background: rgba(255,255,255,.08);
   overflow: hidden;
 }
 .boot-anim-bar i {
   display: block; height: 100%; width: 0%;
   border-radius: 2px;
-  background: var(--os-accent);
+  background: linear-gradient(90deg, var(--os-accent), var(--os-accent-strong));
+  box-shadow: 0 0 8px rgba(239,159,55,.3);
 }
 .boot-anim-hint {
   margin-top: 26px;

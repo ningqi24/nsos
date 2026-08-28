@@ -77,6 +77,11 @@
   --os-icon-sm: 16px;
   --os-icon-md: 20px;
   --os-icon-lg: 24px;
+
+  /* ================= 应用背景（深色模式） ================= */
+  --os-app-bg:     rgba(15,19,27,.95);
+  --os-app-card:   rgba(255,255,255,.06);
+  --os-app-input:  rgba(255,255,255,.08);
 }
 
 /* ---------- 亮色主题预留（P4 开启，默认暗色） ---------- */
@@ -93,8 +98,19 @@
   --os-accent-strong:#f0a13a;
   --os-accent-soft: rgba(219,138,36,.16);
   --os-glass:       rgba(26,29,36,.06);
+  --os-glass-strong: rgba(26,29,36,.10);
+  --os-glass-border: rgba(26,29,36,.12);
+  --os-glass-border-strong: rgba(26,29,36,.20);
+  --os-blur:        blur(20px) saturate(180%);
+  --os-blur-strong: blur(30px) saturate(200%);
   --os-border:      rgba(26,29,36,.12);
   --os-shadow-1: 0 2px 8px  rgba(26,29,36,.08);
   --os-shadow-2: 0 8px 24px rgba(26,29,36,.12);
   --os-shadow-3: 0 18px 48px rgba(26,29,36,.18);
+  --os-shadow-card: 0 4px 24px rgba(26,29,36,.08);
+  --os-shadow-float: 0 8px 40px rgba(26,29,36,.12);
+  /* Light mode app backgrounds */
+  --os-app-bg:     rgba(255,255,255,.95);
+  --os-app-card:   rgba(0,0,0,.03);
+  --os-app-input:  rgba(0,0,0,.04);
 }

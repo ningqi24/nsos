@@ -6,15 +6,30 @@
 
 :root {
   /* ---- 语义色板（P4 主题引擎接管） ---- */
-  --os-bg-0:        #07090e;   /* 基底近黑 */
-  --os-bg-1:        #0f131b;   /* 深色表面 */
-  --os-bg-2:        #161c27;   /* 卡片表面 */
-  --os-fg-0:        #f5f6f8;   /* 主文字 */
-  --os-fg-1:        rgba(245,246,248,.72); /* 次文字 */
-  --os-fg-2:        rgba(245,246,248,.46); /* 弱文字 */
+  --os-bg-0:        #050608;   /* 基底深黑 */
+  --os-bg-1:        #0b0e16;   /* 深色表面 */
+  --os-bg-2:        #131826;   /* 卡片表面 */
+  --os-bg-3:        #1a2033;   /* 悬浮表面 */
+  --os-fg-0:        #f0f3f8;   /* 主文字 */
+  --os-fg-1:        rgba(240,243,248,.68); /* 次文字 */
+  --os-fg-2:        rgba(240,243,248,.42); /* 弱文字 */
   --os-accent:      #ef9f37;   /* 强调色 · 琥珀 */
+  --os-accent-strong: #ffbd5e; /* 强调色亮 */
   --os-accent-soft: rgba(239,159,55,.22);
+  --os-teal:        #35c4a2;   /* 青色强调 */
+  --os-blue:        #5b8def;   /* 蓝色强调 */
   --os-glass:       rgba(255,255,255,.06); /* 毛玻璃基底 */
+  --os-glass-strong: rgba(255,255,255,.10); /* 强毛玻璃 */
+  --os-glass-border: rgba(255,255,255,.12); /* 玻璃边框 */
+  --os-glass-border-strong: rgba(255,255,255,.20); /* 强玻璃边框 */
+  --os-blur:        blur(20px) saturate(180%); /* Liquid Glass 模糊 */
+  --os-blur-strong: blur(30px) saturate(200%); /* 强模糊 */
+  --os-shadow-card: 0 4px 24px rgba(0,0,0,.3); /* 卡片阴影 */
+  --os-shadow-float: 0 8px 40px rgba(0,0,0,.4); /* 浮层阴影 */
+  --os-radius-sm:   8px;
+  --os-radius-md:   14px;
+  --os-radius-lg:   20px;
+  --os-radius-xl:   28px;
 
   /* ---- 动效令牌（统一过渡规范） ---- */
   --os-dur-fast:    .15s;
@@ -22,6 +37,7 @@
   --os-dur-slow:    .5s;
   --os-ease-out:    cubic-bezier(.22, .61, .36, 1);
   --os-ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --os-ease-ios:    cubic-bezier(.25, .46, .45, .94); /* iOS 风格缓动 */
 
   /* ---- 布局 ---- */
   --os-safe-top:    0px;
@@ -50,8 +66,135 @@ html, body {
   inset: 0;
   overflow: hidden;
   background: var(--os-bg-0);
+  transition: background-color .4s var(--os-ease-out);
+}
+
+/* 全局主题切换过渡 */
+#os-root, .os-layer, .launcher, .app-icon .ic, .hw-widget,
+.cc-tog, .cc-slider, .cc-notif, .cc-media, .cc-shortcut,
+.folder-view, .app-drawer, .notif-banner, .ctx-menu,
+#sys-cc-panel, .launcher-dock {
+  transition: background-color .4s var(--os-ease-out), border-color .4s var(--os-ease-out), color .4s var(--os-ease-out);
 }
 
 img { display: block; max-width: 100%; }
 button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
 input { font: inherit; color: inherit; }
+
+/* ============================================================
+ * 触觉反馈模拟（Visual Haptic Feedback）
+ * 通用按压缩放效果 + 涟漪动画
+ * ============================================================ */
+button:active, [role="button"]:active, .clickable:active {
+  transform: scale(.94);
+  transition: transform .08s ease-out;
+}
+
+/* 涟漪动画 */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,.3);
+  pointer-events: none;
+  transform: scale(0);
+  animation: ripple-anim .5s var(--os-ease-out) forwards;
+}
+@keyframes ripple-anim {
+  to { transform: scale(3); opacity: 0; }
+}
+
+/* 全局选择高亮 */
+::selection {
+  background: var(--os-accent-soft);
+  color: var(--os-fg-0);
+}
+
+/* 全局 placeholder */
+input::placeholder, textarea::placeholder {
+  color: var(--os-fg-2);
+}
+
+/* 通用滚动条样式 */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.15);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,.25);
+}
+
+/* 通用禁用状态 */
+[disabled] {
+  opacity: .4;
+  pointer-events: none;
+}
+
+/* 通用聚焦动画 */
+*:focus-visible {
+  outline: 2px solid var(--os-accent);
+  outline-offset: 2px;
+}
+
+/* 防止图片拖拽 */
+img { -webkit-user-drag: none; user-drag: none; }
+
+/* 防止文字选择（系统 UI） */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* 通用淡入动画 */
+.fade-in {
+  animation: fade-in .4s var(--os-ease-out) both;
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 通用滑入动画 */
+.slide-up {
+  animation: slide-up .4s var(--os-ease-spring) both;
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 通用缩放出现 */
+.scale-in {
+  animation: scale-in .3s var(--os-ease-spring) both;
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* 通用抖动动画（错误反馈） */
+.shake {
+  animation: shake .4s var(--os-ease-out) both;
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+/* 省略号工具类 */
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 隐藏滚动条但可滚动 */
+.scroll-hide {
+  scrollbar-width: none;
+}
+.scroll-hide::-webkit-scrollbar { display: none; }

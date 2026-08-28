@@ -65,7 +65,12 @@
   /* ---------- 桌面交互（P2.4 · P4 导航化） ---------- */
   // 点击图标 -> 进入应用任务栈（窗口 / 标题栏 / 挂载由 OS.nav 统一处理，
   // 应用定义见 js/apps/builtin-apps.js 的 manifest，与内核零耦合）
-  OS.bus.on('launcher:launch', ({ app }) => {
+  OS.bus.on('launcher:launch', ({ app, x, y }) => {
+    // 设置应用层的变换原点为图标位置（iOS 风格缩放动画）
+    const appLayer = document.getElementById('layer-app');
+    if (appLayer && x !== undefined && y !== undefined) {
+      appLayer.style.transformOrigin = `${x}px ${y}px`;
+    }
     if (OS.nav && OS.nav.push) {
       OS.nav.push(app.id);
       return;
@@ -111,6 +116,198 @@
     if (OS.notify && OS.notify.init) OS.notify.init();            // 通知服务（P3）
     if (OS.controlcenter && OS.controlcenter.init) OS.controlcenter.init(); // 控制中心（P3）
     if (OS.gesture && OS.gesture.init) OS.gesture.init();         // 手势导航（P3）
+    if (OS.tasks && OS.tasks.init) OS.tasks.init();               // 多任务视图（P5）
+    if (OS.spotlight && OS.spotlight.init) OS.spotlight.init();   // 全局搜索 Spotlight
+    if (OS.island && OS.island.init) OS.island.init();            // 灵动岛 Dynamic Island
+    if (OS.powermenu && OS.powermenu.init) OS.powermenu.init();    // 电源菜单
+    // share-sheet 不需要 init，直接挂载到 OS.share
+
+    /* ---------- 全局涟漪效果 ---------- */
+    // 为所有按钮和可交互元素添加 Material-style 涟漪动画
+    document.addEventListener('pointerdown', (e) => {
+      const target = e.target.closest('button, .clickable, .app-icon, .cc-tog, .cc-shortcut, [role="button"]');
+      if (!target) return;
+      if (getComputedStyle(target).position === 'static') return; // 仅在定位元素上
+      const rect = target.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple';
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+      ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+      target.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 500);
+    });
+
+    // Home Indicator（底部手势条）：点击回桌面 / 双击打开抽屉 / 长按多任务
+    const hi = document.createElement('div');
+    hi.id = 'sys-home-indicator';
+    let hiLastTap = 0;
+    let hiHoldTimer = null;
+    hi.addEventListener('pointerdown', (e) => {
+      // 长按 -> 多任务视图
+      hiHoldTimer = setTimeout(() => {
+        if (OS.tasks && OS.tasks.open) OS.tasks.open();
+      }, 500);
+    });
+    hi.addEventListener('pointermove', () => {
+      if (hiHoldTimer) { clearTimeout(hiHoldTimer); hiHoldTimer = null; }
+    });
+    hi.addEventListener('pointerup', (e) => {
+      if (hiHoldTimer) { clearTimeout(hiHoldTimer); hiHoldTimer = null; }
+      const now = Date.now();
+      // 双击 -> 打开应用抽屉
+      if (now - hiLastTap < 350) {
+        hiLastTap = 0;
+        if (OS.launcher && OS.launcher.openDrawer) OS.launcher.openDrawer();
+      } else {
+        hiLastTap = now;
+        // 单击 -> 回桌面
+        setTimeout(() => {
+          if (hiLastTap === 0) return;
+          if (now === hiLastTap) {
+            if (OS.state.current === 'app' || OS.state.current === 'home') {
+              OS.state.transition('home', { source: 'home-indicator' });
+            }
+          }
+        }, 350);
+      }
+    });
+    const sysuiEl = document.getElementById('os-sysui');
+    if (sysuiEl) sysuiEl.appendChild(hi);
+
+    // 点击状态栏时间区域 -> 滚动桌面到顶部
+    const sbTime = document.querySelector('#sys-statusbar .sb-time');
+    if (sbTime) {
+      sbTime.style.cursor = 'pointer';
+      sbTime.addEventListener('click', () => {
+        const grid = document.querySelector('.launcher-grid');
+        if (grid) grid.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+    /* ---------- 屏幕自动锁屏定时器 ---------- */
+    // 默认 60 秒无操作自动锁屏（可通过设置修改）
+    OS.autoLock = {
+      _timer: null,
+      _timeout: 0, // 0 = 禁用
+      _init() {
+        this._timeout = parseInt(OS.storage.get('settings:autolock', '60'), 10);
+        this._reset();
+        // 监听用户操作重置计时
+        ['pointerdown', 'keydown', 'pointermove'].forEach(ev => {
+          document.addEventListener(ev, () => this._reset(), { passive: true });
+        });
+      },
+      _reset() {
+        if (this._timer) clearTimeout(this._timer);
+        if (this._timeout <= 0) return; // 禁用
+        this._timer = setTimeout(() => {
+          // 仅在桌面或应用状态自动锁屏
+          const s = OS.state.current;
+          if (s === 'home' || s === 'app') {
+            OS.state.transition('locked', { source: 'auto-lock' });
+          }
+        }, this._timeout * 1000);
+      },
+      setTimeout(sec) {
+        this._timeout = sec;
+        OS.storage.set('settings:autolock', sec);
+        this._reset();
+      },
+      getTimeout() { return this._timeout; }
+    };
+    OS.autoLock._init();
+
+    /* ---------- 首次使用引导页 ---------- */
+    OS.onboarding = {
+      _init() {
+        const done = OS.storage.get('onboarding:done', false);
+        if (done) return;
+        // 延迟到桌面层可见后显示
+        OS.bus.on('state:enter:home', () => {
+          if (OS.storage.get('onboarding:done', false)) return;
+          this._show();
+        });
+      },
+
+      _show() {
+        const sysui = document.getElementById('os-sysui');
+        if (!sysui) return;
+        const overlay = document.createElement('div');
+        overlay.className = 'onboarding-overlay';
+        overlay.innerHTML = `
+          <div class="ob-card">
+            <div class="ob-header">
+              <div class="ob-logo">nsos</div>
+              <div class="ob-version">b0.2.0 Aurora</div>
+            </div>
+            <div class="ob-pages">
+              <div class="ob-page active" data-step="1">
+                <div class="ob-illust">👋</div>
+                <h2>欢迎来到 nsos</h2>
+                <p>一个基于 Web 技术构建的现代移动操作系统。体验流畅手势、精美界面和强大功能。</p>
+              </div>
+              <div class="ob-page" data-step="2">
+                <div class="ob-illust">👆</div>
+                <h2>手势导航</h2>
+                <p>底部上滑回桌面 · 底部长按看多任务 · 状态栏下拉控制中心 · 桌面上滑看全部应用</p>
+              </div>
+              <div class="ob-page" data-step="3">
+                <div class="ob-illust">🎨</div>
+                <h2>个性化</h2>
+                <p>在控制中心切换深色/亮色模式，长按桌面更换壁纸，右键图标打开菜单。</p>
+              </div>
+              <div class="ob-page" data-step="4">
+                <div class="ob-illust">⌨️</div>
+                <h2>键盘快捷键</h2>
+                <p>Ctrl+Shift+S 截屏 · Ctrl+Shift+T 切换主题 · Ctrl+Shift+W 切换壁纸</p>
+              </div>
+            </div>
+            <div class="ob-dots">
+              <span class="ob-dot active" data-step="1"></span>
+              <span class="ob-dot" data-step="2"></span>
+              <span class="ob-dot" data-step="3"></span>
+              <span class="ob-dot" data-step="4"></span>
+            </div>
+            <div class="ob-actions">
+              <button class="ob-skip">跳过</button>
+              <button class="ob-next">下一步</button>
+            </div>
+          </div>`;
+        sysui.appendChild(overlay);
+        requestAnimationFrame(() => overlay.classList.add('show'));
+
+        let step = 1;
+        const pages = overlay.querySelectorAll('.ob-page');
+        const dots = overlay.querySelectorAll('.ob-dot');
+        const nextBtn = overlay.querySelector('.ob-next');
+        const skipBtn = overlay.querySelector('.ob-skip');
+
+        const goTo = (n) => {
+          pages.forEach(p => p.classList.toggle('active', parseInt(p.dataset.step, 10) === n));
+          dots.forEach(d => d.classList.toggle('active', parseInt(d.dataset.step, 10) === n));
+          step = n;
+          if (n === 4) nextBtn.textContent = '开始使用';
+          else nextBtn.textContent = '下一步';
+        };
+
+        nextBtn.addEventListener('click', () => {
+          if (step < 4) { goTo(step + 1); return; }
+          this._finish(overlay);
+        });
+        skipBtn.addEventListener('click', () => this._finish(overlay));
+        dots.forEach(d => d.addEventListener('click', () => goTo(parseInt(d.dataset.step, 10))));
+      },
+
+      _finish(overlay) {
+        overlay.classList.remove('show');
+        overlay.classList.add('hide');
+        setTimeout(() => overlay.remove(), 400);
+        OS.storage.set('onboarding:done', true);
+      }
+    };
+    OS.onboarding._init();
+
     OS.bootReady();
     // 上电演示：默认直接进入 boot（后续可改为由开机键触发）
     OS.state.transition('boot', { source: 'auto-power-on' });

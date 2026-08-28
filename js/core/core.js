@@ -12,7 +12,7 @@
   const OS = global.OS = global.OS || {};
 
   OS.name = 'nsos';
-  OS.version = { major: 0, minor: 1, build: 9, codename: 'Kernel' };
+  OS.version = { major: 0, minor: 2, build: 0, codename: 'Aurora' };
 
   // 事件总线（先于一切模块存在）
   OS.bus = new global.OSEventBus();

@@ -62,11 +62,27 @@
 
     /** 清空栈回桌面 */
     home() {
-      stack.length = 0;
-      this._unmount();
-      const host = this._host();
-      if (host) host.innerHTML = '';
-      OS.state.transition('home', { source: 'nav:home' });
+      // 添加关闭动画
+      const appLayer = document.getElementById('layer-app');
+      if (appLayer && !appLayer.hasAttribute('hidden')) {
+        appLayer.classList.add('closing');
+        setTimeout(() => {
+          stack.length = 0;
+          this._unmount();
+          const host = this._host();
+          if (host) host.innerHTML = '';
+          OS.state.transition('home', { source: 'nav:home' });
+          if (appLayer) {
+            appLayer.classList.remove('closing');
+          }
+        }, 200);
+      } else {
+        stack.length = 0;
+        this._unmount();
+        const host = this._host();
+        if (host) host.innerHTML = '';
+        OS.state.transition('home', { source: 'nav:home' });
+      }
     },
 
     /* ---------- 内部 ---------- */
