@@ -207,11 +207,12 @@
 
 .launcher-grid {
   flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   align-content: start;
-  gap: 16px 8px;
-  padding: 6px 20px 0;
+  gap: 14px 8px;
+  padding: 4px 20px 12px;
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -221,7 +222,7 @@
 .hw-widget {
   grid-column: span 2;
   border-radius: var(--os-radius-lg);
-  padding: 16px 18px;
+  padding: 12px 16px;
   background: var(--os-glass);
   backdrop-filter: var(--os-blur);
   -webkit-backdrop-filter: var(--os-blur);
@@ -230,11 +231,11 @@
   cursor: pointer;
   transition: all var(--os-dur-fast) var(--os-ease-spring);
   animation: icon-appear .4s var(--os-ease-spring) both;
-  min-height: 80px;
+  min-height: 68px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
 }
 .hw-widget:active { transform: scale(.95); }
 .hw-widget:nth-child(1) { animation-delay: .02s; }
@@ -247,13 +248,13 @@
   background: linear-gradient(135deg, rgba(53,196,162,.10), rgba(91,141,239,.06)), var(--os-glass);
 }
 .hw-cw-time {
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 200;
   font-variant-numeric: tabular-nums;
   color: var(--os-fg-0);
   line-height: 1;
 }
-.hw-cw-date { font-size: 12px; color: var(--os-fg-1); letter-spacing: .5px; }
+.hw-cw-date { font-size: 11px; color: var(--os-fg-1); letter-spacing: .5px; }
 
 /* 天气小组件 */
 .hw-weather {
@@ -262,12 +263,12 @@
   text-align: right;
 }
 .hw-ww-temp {
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 200;
   color: var(--os-fg-0);
   line-height: 1;
 }
-.hw-ww-cond { font-size: 12px; color: var(--os-fg-1); }
+.hw-ww-cond { font-size: 11px; color: var(--os-fg-1); }
 
 /* 日历小组件 */
 .hw-calendar {
@@ -276,7 +277,7 @@
   text-align: center;
 }
 .hw-cal-day {
-  font-size: 36px;
+  font-size: 28px;
   font-weight: 300;
   color: var(--os-fg-0);
   line-height: 1;
@@ -290,7 +291,7 @@
   text-align: center;
 }
 .hw-bat-pct {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 300;
   color: var(--os-fg-0);
   line-height: 1;

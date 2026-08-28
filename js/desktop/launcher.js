@@ -53,7 +53,7 @@
       weatherWidget.className = 'hw-widget hw-weather';
       weatherWidget.innerHTML = `
         <div class="hw-ww-temp">${temp}°</div>
-        <div class="hw-ww-cond"><os-icon name="weather" size="14"></os-icon> ${cond} · 上海</div>`;
+        <div class="hw-ww-cond"><os-icon name="weather" size="14"></os-icon> ${cond}</div>`;
       weatherWidget.addEventListener('click', () => OS.nav.push('weather'));
       grid.appendChild(weatherWidget);
 
@@ -63,7 +63,7 @@
       calendarWidget.className = 'hw-widget hw-calendar';
       calendarWidget.innerHTML = `
         <div class="hw-cal-day">${now.getDate()}</div>
-        <div class="hw-cal-month">${now.getMonth() + 1}月 ${['日','一','二','三','四','五','六'][now.getDay()]}</div>`;
+        <div class="hw-cal-month">${now.getMonth() + 1}月 · 周${['日','一','二','三','四','五','六'][now.getDay()]}</div>`;
       calendarWidget.addEventListener('click', () => OS.nav.push('calendar'));
       grid.appendChild(calendarWidget);
 
@@ -103,7 +103,7 @@
         const calDay = calendarWidget.querySelector('.hw-cal-day');
         const calMonth = calendarWidget.querySelector('.hw-cal-month');
         if (calDay) calDay.textContent = now.getDate();
-        if (calMonth) calMonth.textContent = (now.getMonth() + 1) + '月 ' + ['日','一','二','三','四','五','六'][now.getDay()];
+        if (calMonth) calMonth.textContent = (now.getMonth() + 1) + '月 · 周' + ['日','一','二','三','四','五','六'][now.getDay()];
       };
       tick();
       setInterval(tick, 1000);

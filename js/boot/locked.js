@@ -36,18 +36,11 @@
       this.dateEl = this.layer.querySelector('#lock-date');
       this.notifsEl = this.layer.querySelector('#lock-notifs');
 
-      // 确保锁屏层高优先级接收事件
-      this.layer.style.zIndex = '800';
+      // 锁屏层本身就是全屏的，直接在上面监听手势
+      // 配合 sysui-lockmode 禁用 sysui 子元素事件，确保手势畅通
       this.layer.style.touchAction = 'none';
       this.layer.style.userSelect = 'none';
       this.layer.style.webkitUserSelect = 'none';
-
-      // 创建全屏手势捕获层（在锁屏层内部，z-index 被 isolation: isolate 限制在层内）
-      this._gestureLayer = document.createElement('div');
-      this._gestureLayer.style.cssText =
-        'position:absolute;inset:0;z-index:10;touch-action:none;' +
-        'user-select:none;-webkit-user-select:none;cursor:grab;';
-      this.layer.appendChild(this._gestureLayer);
 
       this._buildShortcuts();
       this._render();
@@ -59,25 +52,14 @@
       OS.bus.on('state:enter:locked', () => {
         this._renderNotifs();
         this._reset();
-        // 锁屏状态下让 sysui 子元素不拦截触摸，确保手势畅通
         const sysui = document.getElementById('os-sysui');
         if (sysui) sysui.classList.add('sysui-lockmode');
-        // 激活手势捕获层
-        if (this._gestureLayer) {
-          this._gestureLayer.style.pointerEvents = 'auto';
-          this._gestureLayer.style.display = 'block';
-        }
       });
-      // 状态变化时检测是否离开锁屏，清理手势层和 sysui
+      // 离开锁屏时：恢复 sysui 事件
       OS.bus.on('state:change', ({ from }) => {
         if (from === 'locked') {
           const sysui = document.getElementById('os-sysui');
           if (sysui) sysui.classList.remove('sysui-lockmode');
-          // 彻底禁用语义层，防止拦截桌面/欢迎页交互
-          if (this._gestureLayer) {
-            this._gestureLayer.style.pointerEvents = 'none';
-            this._gestureLayer.style.display = 'none';
-          }
         }
       });
       OS.bus.on('notify:post', () => { if (OS.state.current === 'locked') this._renderNotifs(); });
@@ -156,8 +138,8 @@
 
     _bind() {
       const self = this;
-      const catcher = this._gestureLayer;
-      if (!catcher) return;
+      const layer = this.layer;
+      if (!layer) return;
 
       // ---- 手势状态 ----
       let startY = 0, startX = 0;
@@ -199,34 +181,34 @@
       }
 
       // ---- Pointer 事件（桌面 + 移动端现代浏览器）----
-      catcher.addEventListener('pointerdown', (e) => {
+      layer.addEventListener('pointerdown', (e) => {
         onStart(e.clientY, e.clientX);
-        try { catcher.setPointerCapture(e.pointerId); } catch (err) {}
+        try { layer.setPointerCapture(e.pointerId); } catch (err) {}
       });
-      catcher.addEventListener('pointermove', (e) => {
+      layer.addEventListener('pointermove', (e) => {
         onMove(e.clientY, e.clientX);
       });
-      catcher.addEventListener('pointerup', () => onEnd());
-      catcher.addEventListener('pointercancel', () => {
+      layer.addEventListener('pointerup', () => onEnd());
+      layer.addEventListener('pointercancel', () => {
         tracking = false;
         self._bounceBack();
       });
 
       // ---- Touch 事件（兼容部分不支持 pointer 的环境）----
-      catcher.addEventListener('touchstart', (e) => {
+      layer.addEventListener('touchstart', (e) => {
         if (e.touches.length === 1) {
           onStart(e.touches[0].clientY, e.touches[0].clientX);
         }
       }, { passive: true });
-      catcher.addEventListener('touchmove', (e) => {
+      layer.addEventListener('touchmove', (e) => {
         if (e.touches.length === 1) {
           onMove(e.touches[0].clientY, e.touches[0].clientX);
           // 阻止页面滚动
           if (e.cancelable) e.preventDefault();
         }
       }, { passive: false });
-      catcher.addEventListener('touchend', () => onEnd());
-      catcher.addEventListener('touchcancel', () => {
+      layer.addEventListener('touchend', () => onEnd());
+      layer.addEventListener('touchcancel', () => {
         tracking = false;
         self._bounceBack();
       });
@@ -258,12 +240,6 @@
       const self = this;
       if (self._unlocking) return;
       self._unlocking = true;
-
-      // 立即禁用语义层，防止动画期间拦截任何事件
-      if (self._gestureLayer) {
-        self._gestureLayer.style.pointerEvents = 'none';
-        self._gestureLayer.style.display = 'none';
-      }
 
       // 播放解锁动画：内容上移 + 整层淡出
       if (self.content) {
