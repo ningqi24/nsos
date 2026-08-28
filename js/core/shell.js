@@ -559,9 +559,9 @@
 
   SHELL.register({
     name: 'ota',
-    desc: '系统更新（check / list / apply / cache，更新源为线上 https://当前路径/ota/；cache 为浏览器本地缓存更新）',
+    desc: '系统更新（check / list / apply / cache，更新源为线上 https://当前路径/ota/manifest.json；cache 为浏览器本地缓存更新）',
     usage: 'ota check | ota list | ota source | ota apply <package.zip> | ota cache [apply <url>]',
-    run(ctx) {
+    async run(ctx) {
       const sub = (ctx.args[1] || 'check').toLowerCase();
       const source = SHELL.otaSource();
       const parseV = (name) => {
@@ -571,31 +571,79 @@
       const newerThan = (a, b) => a.major > b.major ||
         (a.major === b.major && a.minor > b.minor) ||
         (a.major === b.major && a.minor === b.minor && a.build > b.build);
-      const sdcard = VFS.tree['/sdcard'] || [];
-      const pkgs = sdcard.map(parseV).filter(Boolean).sort((a, b) => a.major - b.major || a.minor - b.minor || a.build - b.build);
 
-      if (sub === 'list') {
-        ctx.push(ctx.line('OTA 源: ' + source + '  （线上 https://当前路径/ota/）', K.sys));
-        if (!pkgs.length) { ctx.push(ctx.line('ota: /sdcard 无更新包', K.out)); return; }
-        pkgs.forEach(p => ctx.push(ctx.line(p.s + '   v' + p.major + '.' + p.minor + '.' + p.build + '  →  ' + source + p.s, K.out)));
-        return;
+      // 从线上 manifest 获取更新包列表（强制不读缓存）
+      async function fetchOnlinePkgs() {
+        try {
+          const url = source + 'manifest.json' + '?t=' + Date.now();
+          const resp = await fetch(url, {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+          });
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          const data = await resp.json();
+          const pkgs = (data.packages || []).map(p => {
+            const v = parseV(p.name);
+            return v ? Object.assign(v, {
+              size_text: p.size_text,
+              released: p.released,
+              codename: p.codename,
+              channel: p.channel,
+              url: source + p.name
+            }) : null;
+          }).filter(Boolean);
+          pkgs.sort((a, b) => a.major - b.major || a.minor - b.minor || a.build - b.build);
+          return pkgs;
+        } catch (e) {
+          return null; // 线上获取失败，回退到 /sdcard
+        }
       }
+
+      const sdcard = VFS.tree['/sdcard'] || [];
+      const sdPkgs = sdcard.map(parseV).filter(Boolean).sort((a, b) => a.major - b.major || a.minor - b.minor || a.build - b.build);
+
       if (sub === 'source') {
         ctx.push(ctx.line('OTA 源（线上）: ' + source, K.ok));
-        ctx.push(ctx.line('说明: 更新包从线上 ota 目录选取，非服务器 /ota/ 固定路径。', K.out));
+        ctx.push(ctx.line('清单文件: ' + source + 'manifest.json', K.out));
+        ctx.push(ctx.line('说明: 更新包从线上 ota 目录获取，强制不读缓存。', K.out));
+        return;
+      }
+      if (sub === 'list') {
+        ctx.push(ctx.line('OTA 源: ' + source, K.sys));
+        const onlinePkgs = await fetchOnlinePkgs();
+        if (onlinePkgs && onlinePkgs.length > 0) {
+          ctx.push(ctx.line('线上可用更新包 (' + onlinePkgs.length + ' 个):', K.ok));
+          onlinePkgs.forEach(p => {
+            const size = p.size_text || '—';
+            const date = p.released || '—';
+            ctx.push(ctx.line('  ' + p.s + '   v' + p.major + '.' + p.minor + '.' + p.build +
+              (p.codename ? ' "' + p.codename + '"' : '') +
+              '  [' + size + '] [' + date + ']', K.out));
+          });
+        } else {
+          ctx.push(ctx.line('线上 ota 源无更新包（或无法访问）', K.warn));
+        }
+        if (sdPkgs.length > 0) {
+          ctx.push(ctx.line('/sdcard 本地更新包 (' + sdPkgs.length + ' 个):', K.sys));
+          sdPkgs.forEach(p => ctx.push(ctx.line('  ' + p.s + '   v' + p.major + '.' + p.minor + '.' + p.build, K.out)));
+        }
         return;
       }
       if (sub === 'check') {
-        ctx.push(ctx.line('OTA 源: ' + source + '  （线上 https://当前路径/ota/）', K.sys));
-        if (!pkgs.length) { ctx.push(ctx.line('ota: 线上 ota 源无更新包 / /sdcard 无更新包', K.out)); return; }
-        const latest = pkgs[pkgs.length - 1];
+        ctx.push(ctx.line('OTA 源: ' + source, K.sys));
+        const onlinePkgs = await fetchOnlinePkgs();
         const cur = OS.version;
+        const allPkgs = onlinePkgs && onlinePkgs.length > 0 ? onlinePkgs : sdPkgs;
+        const srcLabel = onlinePkgs && onlinePkgs.length > 0 ? '线上' : '/sdcard';
+        if (!allPkgs.length) { ctx.push(ctx.line('ota: 无可用更新包', K.out)); return; }
+        const latest = allPkgs[allPkgs.length - 1];
         if (newerThan(latest, cur)) {
-          ctx.push(ctx.line(`可更新: v${latest.major}.${latest.minor}.${latest.build}（当前 v${cur.major}.${cur.minor}.${cur.build}）`, K.warn));
-          ctx.push(ctx.line('可下载: ' + source + latest.s, K.out));
-          ctx.push(ctx.line('可执行: ota apply ' + latest.s + '  （刷写需先 reboot recovery）', K.out));
+          ctx.push(ctx.line(`可更新: v${latest.major}.${latest.minor}.${latest.build}${latest.codename ? ' "' + latest.codename + '"' : ''}（当前 v${cur.major}.${cur.minor}.${cur.build}）`, K.warn));
+          if (latest.url) ctx.push(ctx.line('下载地址: ' + latest.url, K.out));
+          ctx.push(ctx.line('安装方式: 设置 → 通用 → 系统更新 → 下载并安装', K.out));
+          ctx.push(ctx.line('          或执行 ota cache apply ' + latest.url, K.out));
         } else {
-          ctx.push(ctx.line(`已是最新版本 v${cur.major}.${cur.minor}.${cur.build}`, K.ok));
+          ctx.push(ctx.line(`已是最新版本 v${cur.major}.${cur.minor}.${cur.build}（${srcLabel}最新: v${latest.major}.${latest.minor}.${latest.build}）`, K.ok));
         }
         return;
       }

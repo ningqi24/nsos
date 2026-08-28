@@ -310,9 +310,12 @@
             </div>
             <div class="st-card">
               <div class="st-card-title">系统更新</div>
-              <div class="st-info-row"><span>当前版本</span><b>${verTxt}</b></div>
-              <div class="st-info-row"><span>更新状态</span><b style="color:var(--os-success)">已是最新版本</b></div>
+              <div class="st-info-row"><span>当前版本</span><b>${verTxt} "${v.codename || ''}"</b></div>
+              <div id="st-ota-status" class="st-ota-status">
+                <span class="st-ota-state">点击检查更新</span>
+              </div>
               <button class="st-action-btn" id="st-check-update">检查更新</button>
+              <div id="st-ota-list" class="st-ota-list" style="display:none"></div>
             </div>
             <div class="st-card">
               <div class="st-toggle-row">
@@ -442,17 +445,131 @@
           });
         });
 
-        // Check update button
+        // Check update button - 真正从线上 ota/manifest.json 获取
         const checkBtn = host.querySelector('#st-check-update');
+        const otaStatus = host.querySelector('#st-ota-status');
+        const otaList = host.querySelector('#st-ota-list');
         if (checkBtn) {
-          checkBtn.addEventListener('click', () => {
+          checkBtn.addEventListener('click', async () => {
             checkBtn.textContent = '检查中…';
             checkBtn.disabled = true;
-            setTimeout(() => {
-              checkBtn.textContent = '检查更新';
+            if (otaStatus) {
+              otaStatus.innerHTML = '<span class="st-ota-state st-ota-checking">正在连接更新服务器…</span>';
+            }
+            try {
+              const ota = OS.ota && OS.ota.local;
+              if (!ota) throw new Error('OTA 模块未就绪');
+              const result = await ota.fetchLatest();
+              const all = result.all || [];
+              const newer = result.newer || [];
+              const cur = OS.version;
+              const curVer = 'b' + cur.major + '.' + cur.minor + '.' + cur.build;
+
+              if (otaStatus) {
+                if (newer.length > 0) {
+                  otaStatus.innerHTML = `<span class="st-ota-state st-ota-new">发现 ${newer.length} 个更新可用</span>`;
+                } else if (all.length > 0) {
+                  otaStatus.innerHTML = `<span class="st-ota-state st-ota-ok">已是最新版本</span>`;
+                } else {
+                  otaStatus.innerHTML = `<span class="st-ota-state">暂无更新包</span>`;
+                }
+              }
+
+              if (otaList && all.length > 0) {
+                otaList.style.display = 'block';
+                otaList.innerHTML = all.map(pkg => {
+                  const pv = ota.parseVer(pkg.name);
+                  const isNewer = pv && ota.cmpVer(pv, cur) > 0;
+                  const isCurrent = pv && ota.cmpVer(pv, cur) === 0;
+                  const versionLabel = pkg.version || (pv ? pv.major + '.' + pv.minor + '.' + pv.build : '?');
+                  const codename = pkg.codename ? ` "${pkg.codename}"` : '';
+                  const badge = isNewer ? '<span class="st-ota-badge new">可更新</span>' :
+                                isCurrent ? '<span class="st-ota-badge current">当前版本</span>' :
+                                '<span class="st-ota-badge old">历史版本</span>';
+                  const changelogHtml = (pkg.changelog && pkg.changelog.length)
+                    ? `<div class="st-ota-changelog">
+                         <div class="st-ota-cl-title">更新内容：</div>
+                         <ul>${pkg.changelog.slice(0, 6).map(c => `<li>${c}</li>`).join('')}
+                             ${pkg.changelog.length > 6 ? `<li class="st-ota-cl-more">…等 ${pkg.changelog.length} 项更新</li>` : ''}
+                         </ul>
+                       </div>`
+                    : '';
+                  return `
+                    <div class="st-ota-item ${isNewer ? 'is-newer' : ''} ${isCurrent ? 'is-current' : ''}">
+                      <div class="st-ota-header">
+                        <div class="st-ota-ver">
+                          <b>v${versionLabel}</b>${codename}
+                          ${badge}
+                        </div>
+                        <div class="st-ota-meta">
+                          <span>${pkg.size_text || pkg.size ? (pkg.size_text || (Math.round(pkg.size / 1024) + ' KB')) : '—'}</span>
+                          <span>${pkg.released || '—'}</span>
+                        </div>
+                      </div>
+                      ${changelogHtml}
+                      <div class="st-ota-actions">
+                        <button class="st-ota-install-btn" data-pkg="${pkg.name}" ${isCurrent ? 'disabled' : ''}>
+                          ${isCurrent ? '当前版本' : (isNewer ? '下载并安装' : '安装此版本')}
+                        </button>
+                      </div>
+                    </div>`;
+                }).join('');
+
+                // 绑定安装按钮
+                otaList.querySelectorAll('.st-ota-install-btn').forEach(btn => {
+                  btn.addEventListener('click', () => {
+                    const pkgName = btn.dataset.pkg;
+                    const base = ota.getSourceBase ? ota.getSourceBase() : 'ota/';
+                    const url = base + pkgName + '?t=' + Date.now();
+                    _installOta(url, pkgName, btn, otaStatus);
+                  });
+                });
+              } else if (otaList) {
+                otaList.style.display = 'none';
+              }
+            } catch (err) {
+              if (otaStatus) {
+                otaStatus.innerHTML = `<span class="st-ota-state st-ota-err">检查失败：${err.message || err}</span>`;
+              }
+              if (OS.ui && OS.ui.toast) OS.ui.toast('检查更新失败', { ms: 2000 });
+            } finally {
+              checkBtn.textContent = '重新检查';
               checkBtn.disabled = false;
-              if (OS.ui && OS.ui.toast) OS.ui.toast('已是最新版本', { type: 'success', ms: 1200 });
+            }
+          });
+        }
+
+        // 安装 OTA 更新包
+        function _installOta(url, pkgName, btn, statusEl) {
+          const ota = OS.ota && OS.ota.local;
+          if (!ota) return;
+          btn.disabled = true;
+          btn.textContent = '下载中…';
+          if (statusEl) {
+            statusEl.innerHTML = '<span class="st-ota-state st-ota-checking">正在下载更新包…</span>';
+          }
+          ota.applyFromUrl(url).then((r) => {
+            btn.textContent = '安装完成';
+            if (statusEl) {
+              statusEl.innerHTML = `<span class="st-ota-state st-ota-ok">✓ ${r.ver} 安装成功，共 ${r.fileCount} 个文件</span>`;
+            }
+            if (OS.ui && OS.ui.toast) OS.ui.toast('更新成功，刷新页面生效', { ms: 3000 });
+            if (OS.notify) {
+              OS.notify.post({ icon: 'update', title: '系统更新完成', text: r.ver + ' 已安装，刷新页面以应用更新', app: 'settings' });
+            }
+            // 3 秒后提示刷新
+            setTimeout(() => {
+              if (confirm('更新已安装完成。是否立即刷新页面以应用更新？')) {
+                location.reload();
+              }
             }, 1500);
+          }).catch((err) => {
+            btn.disabled = false;
+            btn.textContent = '重试';
+            if (statusEl) {
+              statusEl.innerHTML = `<span class="st-ota-state st-ota-err">安装失败：${err.message || err}</span>`;
+            }
+            if (OS.ui && OS.ui.toast) OS.ui.toast('更新失败：' + (err.message || err), { ms: 3000 });
           });
         }
 

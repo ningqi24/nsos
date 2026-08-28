@@ -1452,6 +1452,154 @@
 }
 .st-autolock-opt:active { transform: scale(.94); }
 
+/* ============================================================
+ * 系统更新 - OTA 列表
+ * ============================================================ */
+.st-ota-status {
+  padding: 8px 0;
+  text-align: center;
+}
+.st-ota-state {
+  font-size: 13px;
+  color: var(--os-fg-1);
+}
+.st-ota-state.st-ota-checking {
+  color: var(--os-accent);
+  animation: ota-pulse 1.5s ease-in-out infinite;
+}
+@keyframes ota-pulse {
+  0%, 100% { opacity: .7; }
+  50% { opacity: 1; }
+}
+.st-ota-state.st-ota-ok { color: var(--os-success, #34c759); }
+.st-ota-state.st-ota-new { color: var(--os-accent-strong, #f0a13a); font-weight: 600; }
+.st-ota-state.st-ota-err { color: #f2574c; }
+
+.st-ota-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.st-ota-item {
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--os-glass-border);
+  border-radius: var(--os-radius-md);
+  padding: 14px;
+  transition: all var(--os-dur-fast);
+}
+.st-ota-item.is-newer {
+  border-color: rgba(239,159,55,.3);
+  background: rgba(239,159,55,.06);
+}
+.st-ota-item.is-current {
+  border-color: rgba(52,199,89,.2);
+  opacity: .7;
+}
+.st-ota-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.st-ota-ver {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--os-fg-0);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.st-ota-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--os-radius-full);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+.st-ota-badge.new {
+  background: rgba(239,159,55,.2);
+  color: var(--os-accent-strong);
+}
+.st-ota-badge.current {
+  background: rgba(52,199,89,.15);
+  color: #34c759;
+}
+.st-ota-badge.old {
+  background: rgba(255,255,255,.08);
+  color: var(--os-fg-2);
+}
+.st-ota-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--os-fg-2);
+  white-space: nowrap;
+}
+.st-ota-changelog {
+  margin: 10px 0;
+  padding: 10px 12px;
+  background: rgba(0,0,0,.2);
+  border-radius: var(--os-radius-sm);
+}
+.st-ota-cl-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--os-fg-2);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+.st-ota-changelog ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+  color: var(--os-fg-1);
+  line-height: 1.8;
+}
+.st-ota-cl-more {
+  color: var(--os-fg-3);
+  list-style: none;
+  margin-left: -16px;
+  font-style: italic;
+}
+.st-ota-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+.st-ota-install-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: var(--os-radius-md);
+  background: linear-gradient(135deg, var(--os-accent), var(--os-accent-strong));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all var(--os-dur-fast);
+  box-shadow: 0 2px 8px rgba(108,92,231,.25);
+}
+.st-ota-install-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(108,92,231,.35);
+  transform: translateY(-1px);
+}
+.st-ota-install-btn:active:not(:disabled) {
+  transform: scale(.97);
+}
+.st-ota-install-btn:disabled {
+  background: rgba(255,255,255,.08);
+  color: var(--os-fg-2);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 
 /* ============================================================
  * 应用切换器 / 多任务视图

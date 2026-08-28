@@ -234,6 +234,54 @@
     localStorage.removeItem(VER_KEY);
   }
 
+  /* ---------- 线上 OTA 清单（manifest.json） ---------- */
+
+  // 推导 OTA 源 URL（与 shell.js 的 otaSource 逻辑一致）
+  function _otaSourceBase() {
+    try {
+      if (typeof location !== 'undefined' && location.href) {
+        const dir = location.href.slice(0, location.href.lastIndexOf('/') + 1);
+        const u = new URL('ota/', dir);
+        return u.href.endsWith('/') ? u.href : u.href + '/';
+      }
+    } catch (e) {}
+    return 'ota/';
+  }
+
+  /**
+   * 从线上获取 OTA 更新清单（强制不读缓存）
+   * 返回 { updated, packages: [{name, version, codename, size, size_text, released, channel, changelog}] }
+   */
+  async function fetchManifest() {
+    const base = _otaSourceBase();
+    const url = base + 'manifest.json' + '?t=' + Date.now(); // 时间戳防缓存
+    const resp = await fetch(url, {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+    });
+    if (!resp.ok) throw new Error('获取更新清单失败 HTTP ' + resp.status);
+    const data = await resp.json();
+    if (!data || !Array.isArray(data.packages)) throw new Error('更新清单格式错误');
+    // 按版本号降序排列（最新的在前）
+    data.packages.sort((a, b) => {
+      const va = parseVer(a.name), vb = parseVer(b.name);
+      if (!va || !vb) return 0;
+      return vb.major - va.major || vb.minor - va.minor || vb.build - va.build;
+    });
+    return data;
+  }
+
+  /** 获取最新的更新包（比当前版本新的） */
+  async function fetchLatest() {
+    const m = await fetchManifest();
+    const cur = OS.version;
+    const newer = m.packages.filter(p => {
+      const v = parseVer(p.name);
+      return v && cmpVer(v, cur) > 0;
+    });
+    return { manifest: m, all: m.packages, newer, latest: newer[0] || null };
+  }
+
   OS.ota = OS.ota || {};
   OS.ota.local = {
     CACHE,
@@ -248,7 +296,10 @@
     clear,
     verFromName,
     parseVer,
-    cmpVer
+    cmpVer,
+    fetchManifest,
+    fetchLatest,
+    getSourceBase: _otaSourceBase
   };
 
   /* 静默注册：环境不支持时不影响站点正常使用 */
