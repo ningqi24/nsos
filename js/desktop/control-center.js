@@ -4,7 +4,6 @@
  *   快捷开关（Wi-Fi / 蓝牙 / 飞行 / 手电 / 省电 / 静音 / 免打扰 / 深色）
  *   亮度 / 音量滑杆（亮度实时作用于页面）
  *   媒体控制（上一曲 / 播放暂停 / 下一曲）
- *   通知列表（数据源 OS.notify）
  *   快捷功能（手电筒 / 计算器 / 计时器 / 相机）
  * 开关状态持久化到 storage（key: cc:<id>）。
  * ============================================================ */
@@ -60,8 +59,7 @@
           <div class="cc-slider"><os-icon name="brightness" size="20"></os-icon><os-slider id="cc-brightness" min="20" max="100" value="100"></os-slider></div>
           <div class="cc-slider"><os-icon name="volume" size="20"></os-icon><os-slider id="cc-volume" min="0" max="100" value="60"></os-slider></div>
         </div>
-        <div class="cc-shortcuts" id="cc-shortcuts"></div>
-        <div class="cc-notifs" id="cc-notifs"></div>`;
+        <div class="cc-shortcuts" id="cc-shortcuts"></div>`;
       host.appendChild(panel);
       this.panel = panel;
 
@@ -70,17 +68,16 @@
       this._bindSliders();
       this._bindMediaControls();
 
-      // 点击面板外部区域关闭
+      // 点击面板外部区域关闭（用 composedPath 兼容 Shadow DOM 中的 os-icon）
       document.addEventListener('pointerdown', (e) => {
-        if (this.panel.classList.contains('open') && !this.panel.contains(e.target) &&
-            !(e.target.closest('#sys-statusbar'))) {
+        if (!this.panel.classList.contains('open')) return;
+        const path = e.composedPath();
+        const inPanel = path.some(el => el === this.panel);
+        const inStatusBar = path.some(el => el.closest && el.closest('#sys-statusbar'));
+        if (!inPanel && !inStatusBar) {
           this.close();
         }
       });
-
-      // 通知数据变化 -> 重渲染列表
-      OS.bus.on('notify:post', () => this._renderNotifs());
-      OS.bus.on('notify:change', () => this._renderNotifs());
     },
 
     _buildToggles(container) {
@@ -175,58 +172,13 @@
       });
     },
 
-    _renderNotifs() {
-      const box = this.panel.querySelector('#cc-notifs');
-      if (!box) return;
-      const items = (OS.notify && OS.notify.items) || [];
-      if (items.length === 0) {
-        box.innerHTML = '<div class="cc-notif-empty">暂无通知</div>';
-        return;
-      }
-      box.innerHTML = `<div class="cc-notif-header"><span>${items.length} 条通知</span><button class="cc-clear-all" id="cc-clear-all">全部清除</button></div>`;
-      const listEl = document.createElement('div');
-      listEl.className = 'cc-notif-list';
-      items.forEach((n) => {
-        const d = new Date(n.time);
-        const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-        const row = document.createElement('os-list-item');
-        if (n.icon) row.setAttribute('icon', n.icon);
-        row.setAttribute('title', n.title);
-        row.setAttribute('text', n.text);
-        row.setAttribute('time', hm);
-        if (n.read) row.setAttribute('read', '');
-        row.addEventListener('os-dismiss', () => {
-          if (OS.notify) OS.notify.remove(n.id);
-        });
-        row.addEventListener('os-click', () => {
-          n.read = true;
-          if (OS.notify) { OS.notify._persist(); OS.notify._updateBadge(); OS.bus.emit('notify:change'); }
-        });
-        listEl.appendChild(row);
-      });
-      box.appendChild(listEl);
-
-      // 全部清除按钮
-      const clearAll = box.querySelector('#cc-clear-all');
-      if (clearAll) {
-        clearAll.addEventListener('click', () => {
-          if (OS.notify && OS.notify.clearAll) {
-            OS.notify.clearAll();
-          } else if (OS.notify && OS.notify.items) {
-            OS.notify.items.length = 0;
-            OS.notify._persist();
-            OS.notify._updateBadge();
-            OS.bus.emit('notify:change');
-          }
-          this._renderNotifs();
-        });
-      }
-    },
-
     open() {
       if (!this.panel) return;
       this.panel.classList.add('open');
-      this._renderNotifs();
+      // 打开控制中心时关闭通知中心
+      if (OS.notify && OS.notify.panel && OS.notify.panel.classList.contains('open')) {
+        OS.notify.closePanel();
+      }
     },
 
     close() {

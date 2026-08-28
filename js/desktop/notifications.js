@@ -14,14 +14,124 @@
   OS.reg('notify', {
     items: [],
     MAX: 20,
+    panel: null,
 
     init() {
       // 从 storage 恢复历史通知
       this.items = OS.storage.get('notif:items', []).slice(0, this.MAX);
+      this._buildPanel();
       this._buildBadge();
 
       // 每次进入桌面时触发一次演示推送（60s 内仅一次）
       OS.bus.on('state:enter:home', () => this._demo());
+    },
+
+    /* ---------- 通知中心面板 ---------- */
+    _buildPanel() {
+      const sysui = document.getElementById('os-sysui');
+      if (!sysui) return;
+      const panel = document.createElement('div');
+      panel.id = 'sys-nc-panel';
+      panel.innerHTML = `
+        <div class="nc-header">
+          <div class="nc-title">通知中心</div>
+          <button class="nc-clear">清除全部</button>
+        </div>
+        <div class="nc-list" id="nc-list"></div>`;
+      sysui.appendChild(panel);
+      this.panel = panel;
+
+      // 清除全部
+      panel.querySelector('.nc-clear').addEventListener('click', () => {
+        this.clearAll();
+      });
+
+      // 点击面板外部区域关闭（用 composedPath 兼容 Shadow DOM）
+      document.addEventListener('pointerdown', (e) => {
+        if (!this.panel.classList.contains('open')) return;
+        const path = e.composedPath();
+        const inPanel = path.some(el => el === this.panel);
+        const inStatusBar = path.some(el => el.closest && el.closest('#sys-statusbar'));
+        if (!inPanel && !inStatusBar) {
+          this.closePanel();
+        }
+      });
+
+      // 通知变化时刷新面板
+      OS.bus.on('notify:post', () => {
+        if (this.panel.classList.contains('open')) this._renderPanel();
+      });
+      OS.bus.on('notify:change', () => {
+        if (this.panel.classList.contains('open')) this._renderPanel();
+      });
+    },
+
+    openPanel() {
+      if (!this.panel) return;
+      this.panel.classList.add('open');
+      this._renderPanel();
+      // 打开控制中心时关闭通知中心，反之亦然
+      if (OS.controlcenter && OS.controlcenter.panel.classList.contains('open')) {
+        OS.controlcenter.close();
+      }
+    },
+
+    closePanel() {
+      if (this.panel) this.panel.classList.remove('open');
+    },
+
+    togglePanel() {
+      if (!this.panel) return;
+      if (this.panel.classList.contains('open')) this.closePanel();
+      else this.openPanel();
+    },
+
+    _renderPanel() {
+      const list = this.panel.querySelector('#nc-list');
+      if (!list) return;
+      if (this.items.length === 0) {
+        list.innerHTML = '<div class="nc-empty">暂无通知</div>';
+        return;
+      }
+      list.innerHTML = '';
+      this.items.forEach(n => {
+        const el = document.createElement('div');
+        el.className = 'nc-item';
+        const app = n.app && OS.apps ? OS.apps.get(n.app) : null;
+        const iconCls = app ? app.cls : 'ic-blue';
+        const timeStr = this._formatTime(n.time);
+        el.innerHTML = `
+          <div class="nc-icon ic ${iconCls}"><os-icon name="${n.icon}" size="16"></os-icon></div>
+          <div class="nc-body">
+            <div class="nc-row">
+              <span class="nc-title">${n.title}</span>
+              <span class="nc-time">${timeStr}</span>
+            </div>
+            <div class="nc-text">${n.text}</div>
+          </div>
+          <button class="nc-item-close">×</button>`;
+        el.querySelector('.nc-item-close').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.remove(n.id);
+        });
+        el.addEventListener('click', () => {
+          if (n.app && OS.apps.has(n.app)) {
+            this.closePanel();
+            setTimeout(() => OS.nav.push(n.app), 200);
+          }
+        });
+        list.appendChild(el);
+      });
+    },
+
+    _formatTime(ts) {
+      const d = new Date(ts);
+      const now = new Date();
+      const diff = now - d;
+      if (diff < 60000) return '刚刚';
+      if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+      if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+      return (d.getMonth() + 1) + '/' + d.getDate();
     },
 
     /** 发布一条通知，返回通知对象 */
@@ -74,7 +184,7 @@
       dot.setAttribute('count', '0');
       badge.appendChild(dot);
       badge.addEventListener('click', () => {
-        if (OS.controlcenter) OS.controlcenter.toggle();
+        this.togglePanel();
       });
       right.prepend(badge);
       this._updateBadge();

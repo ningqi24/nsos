@@ -56,16 +56,26 @@
           holdTimer = null;
         }
 
-        // 顶部下滑 -> 控制中心（锁屏状态下不触发）
+        // 顶部下滑 -> 通知中心/控制中心（锁屏状态下不触发）
         if (!pulldownFired && sy < TOP_ZONE && dy > PULL_THRESHOLD &&
             Math.abs(dy) > Math.abs(dx) &&
             OS.state.current !== 'locked') {
           pulldownFired = true;
-          if (OS.controlcenter) {
-            if (OS.controlcenter.panel.classList.contains('open')) {
-              OS.controlcenter.close();
-            } else {
-              OS.controlcenter.open();
+          // 左半屏下滑 -> 通知中心，右半屏下滑 -> 控制中心
+          const fromLeft = sx < W / 2;
+          if (fromLeft) {
+            // 通知中心
+            if (OS.notify && OS.notify.togglePanel) {
+              OS.notify.togglePanel();
+            }
+          } else {
+            // 控制中心
+            if (OS.controlcenter) {
+              if (OS.controlcenter.panel.classList.contains('open')) {
+                OS.controlcenter.close();
+              } else {
+                OS.controlcenter.open();
+              }
             }
           }
           return;

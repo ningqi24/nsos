@@ -31,7 +31,7 @@
       this._buildDrawer();
     },
 
-    /* 桌面小组件：时钟 + 天气 */
+    /* 桌面小组件：时钟 */
     _buildWidgets() {
       const grid = document.querySelector('.launcher-grid');
       if (!grid) return;
@@ -44,18 +44,6 @@
         <div class="hw-cw-date" id="hw-cw-date">----</div>`;
       clockWidget.addEventListener('click', () => OS.nav.push('clock'));
       grid.appendChild(clockWidget);
-
-      // 天气小组件
-      const temp = 18 + Math.floor(Math.random() * 12);
-      const conds = ['晴', '多云', '阴', '小雨', '雷阵雨'];
-      const cond = conds[Math.floor(Math.random() * conds.length)];
-      const weatherWidget = document.createElement('div');
-      weatherWidget.className = 'hw-widget hw-weather';
-      weatherWidget.innerHTML = `
-        <div class="hw-ww-temp">${temp}°</div>
-        <div class="hw-ww-cond"><os-icon name="weather" size="14"></os-icon> ${cond}</div>`;
-      weatherWidget.addEventListener('click', () => OS.nav.push('weather'));
-      grid.appendChild(weatherWidget);
 
       // 更新时钟
       const pad = n => String(n).padStart(2, '0');
