@@ -243,22 +243,22 @@
             </div>
             <div class="ob-pages">
               <div class="ob-page active" data-step="1">
-                <div class="ob-illust">👋</div>
+                <div class="ob-step-num">01</div>
                 <h2>欢迎来到 nsos</h2>
-                <p>一个基于 Web 技术构建的现代移动操作系统。体验流畅手势、精美界面和强大功能。</p>
+                <p>基于 Web 技术构建的现代移动操作系统。流畅手势、精致界面、强大功能。</p>
               </div>
               <div class="ob-page" data-step="2">
-                <div class="ob-illust">👆</div>
+                <div class="ob-step-num">02</div>
                 <h2>手势导航</h2>
-                <p>底部上滑回桌面 · 底部长按看多任务 · 状态栏下拉控制中心 · 桌面上滑看全部应用</p>
+                <p>底部上滑回桌面 · 底部长按多任务 · 状态栏下划控制中心 · 桌面上划全部应用</p>
               </div>
               <div class="ob-page" data-step="3">
-                <div class="ob-illust">🎨</div>
+                <div class="ob-step-num">03</div>
                 <h2>个性化</h2>
-                <p>在控制中心切换深色/亮色模式，长按桌面更换壁纸，右键图标打开菜单。</p>
+                <p>控制中心切换深色/亮色模式，长按桌面更换壁纸，右键图标打开菜单。</p>
               </div>
               <div class="ob-page" data-step="4">
-                <div class="ob-illust">⌨️</div>
+                <div class="ob-step-num">04</div>
                 <h2>键盘快捷键</h2>
                 <p>Ctrl+Shift+S 截屏 · Ctrl+Shift+T 切换主题 · Ctrl+Shift+W 切换壁纸</p>
               </div>

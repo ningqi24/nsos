@@ -286,8 +286,8 @@
             ${on ? `
             <div class="st-card">
               <div class="st-card-title">我的设备</div>
-              <div class="st-bt-item"><div class="st-bt-ic">🎧</div><div class="st-bt-info"><span>AirPods Pro</span><span class="st-bt-state">已连接</span></div></div>
-              <div class="st-bt-item"><div class="st-bt-ic">⌚</div><div class="st-bt-info"><span>Watch S9</span><span class="st-bt-state">已配对</span></div></div>
+              <div class="st-bt-item"><div class="st-bt-ic"><os-icon name="bluetooth" size="18"></os-icon></div><div class="st-bt-info"><span>AirPods Pro</span><span class="st-bt-state">已连接</span></div></div>
+              <div class="st-bt-item"><div class="st-bt-ic"><os-icon name="bluetooth" size="18"></os-icon></div><div class="st-bt-info"><span>Watch S9</span><span class="st-bt-state">已配对</span></div></div>
             </div>` : '<div class="st-empty-hint">蓝牙已关闭</div>'}
           </div>`;
       };
@@ -387,10 +387,10 @@
             </div>
             <div class="st-card">
               <div class="st-card-title">占用空间</div>
-              <div class="st-storage-item"><span>💾 系统</span><b>2.4 GB</b></div>
-              <div class="st-storage-item"><span>📱 应用</span><b>1.8 GB</b></div>
-              <div class="st-storage-item"><span>🖼 媒体</span><b>3.2 GB</b></div>
-              <div class="st-storage-item"><span>📦 缓存</span><b>0.6 GB</b></div>
+              <div class="st-storage-item"><span><os-icon name="settings" size="14"></os-icon> 系统</span><b>2.4 GB</b></div>
+              <div class="st-storage-item"><span><os-icon name="apps" size="14"></os-icon> 应用</span><b>1.8 GB</b></div>
+              <div class="st-storage-item"><span><os-icon name="photos" size="14"></os-icon> 媒体</span><b>3.2 GB</b></div>
+              <div class="st-storage-item"><span><os-icon name="save" size="14"></os-icon> 缓存</span><b>0.6 GB</b></div>
             </div>
           </div>`;
       };
@@ -972,7 +972,6 @@
     description: '天气预报（模拟数据）',
     mount(host) {
       const conditions = ['晴', '多云', '阴', '小雨', '中雨', '雷阵雨', '小雪', '雾'];
-      const icons = { '晴': '☀', '多云': '⛅', '阴': '☁', '小雨': '🌧', '中雨': '🌧', '雷阵雨': '⛈', '小雪': '🌨', '雾': '🌫' };
       const temp = 18 + Math.floor(Math.random() * 12);
       const cond = conditions[Math.floor(Math.random() * conditions.length)];
       const feelTemp = temp + Math.floor(Math.random() * 6 - 3);
@@ -986,7 +985,7 @@
         const h = (nowHour + i) % 24;
         const t = temp + Math.floor(Math.random() * 8 - 4);
         const c = conditions[Math.floor(Math.random() * conditions.length)];
-        hourlyHtml += `<div class="wt-hour"><span class="wt-h-time">${i === 0 ? '现在' : h + '时'}</span><span class="wt-h-icon">${icons[c]}</span><span class="wt-h-temp">${t}°</span></div>`;
+        hourlyHtml += `<div class="wt-hour"><span class="wt-h-time">${i === 0 ? '现在' : h + '时'}</span><span class="wt-h-icon"><os-icon name="weather" size="18"></os-icon></span><span class="wt-h-temp">${t}°</span></div>`;
       }
 
       let dailyHtml = '';
@@ -995,7 +994,7 @@
         const hi = temp + Math.floor(Math.random() * 8);
         const lo = temp - Math.floor(Math.random() * 8);
         const c = conditions[Math.floor(Math.random() * conditions.length)];
-        dailyHtml += `<div class="wt-day"><span class="wt-d-name">${days[i]}</span><span class="wt-d-icon">${icons[c]}</span><span class="wt-d-lo">${lo}°</span><div class="wt-d-bar"><i style="left:${lo + 10}%;width:${hi - lo + 5}%"></i></div><span class="wt-d-hi">${hi}°</span></div>`;
+        dailyHtml += `<div class="wt-day"><span class="wt-d-name">${days[i]}</span><span class="wt-d-icon"><os-icon name="weather" size="16"></os-icon></span><span class="wt-d-lo">${lo}°</span><div class="wt-d-bar"><i style="left:${lo + 10}%;width:${hi - lo + 5}%"></i></div><span class="wt-d-hi">${hi}°</span></div>`;
       }
 
       host.innerHTML = `
@@ -1329,7 +1328,7 @@
           <div class="app-photos">
             <div class="ph-header"><span>相册</span><span class="ph-count">${gradients.length} 张照片</span></div>
             <div class="ph-grid">
-              ${gradients.map((g, i) => `<div class="ph-thumb" style="background:${g}" data-idx="${i}"><span class="ph-thumb-ic">🖼</span></div>`).join('')}
+              ${gradients.map((g, i) => `<div class="ph-thumb" style="background:${g}" data-idx="${i}"><span class="ph-thumb-ic"><os-icon name="photos" size="20"></os-icon></span></div>`).join('')}
             </div>
           </div>`;
         host.querySelectorAll('.ph-thumb').forEach(el => {
@@ -1741,10 +1740,10 @@
     mount(host) {
       let currentPath = '/';
       const fileIcons = {
-        '.zip': '📦', '.txt': '📄', '.md': '📄', '.js': '📜',
-        '.css': '🎨', '.html': '🌐', '.json': '📋', '.svg': '🖼',
+        '.zip': 'save', '.txt': 'notes', '.md': 'notes', '.js': 'terminal',
+        '.css': 'notes', '.html': 'browser', '.json': 'notes', '.svg': 'photos',
       };
-      const folderIcon = '📁';
+      const folderIcon = 'apps';
 
       const getFiles = (path) => {
         // Use the shell VFS if available, otherwise mock data
@@ -1794,17 +1793,17 @@
           data.dirs.forEach(dir => {
             const newPath = currentPath === '/' ? '/' + dir : currentPath + '/' + dir;
             itemsHtml += `<div class="fl-item fl-dir" data-path="${newPath}">
-              <span class="fl-item-ic">${folderIcon}</span>
+              <span class="fl-item-ic"><os-icon name="${folderIcon}" size="18"></os-icon></span>
               <span class="fl-item-name">${dir}</span>
               <span class="fl-item-meta">文件夹</span>
             </div>`;
           });
           data.files.forEach(file => {
             const ext = '.' + (file.split('.').pop() || '');
-            const icon = fileIcons[ext] || '📄';
+            const icon = fileIcons[ext] || 'notes';
             const size = (Math.random() * 10 + 0.1).toFixed(1) + ' MB';
             itemsHtml += `<div class="fl-item fl-file" data-name="${file}">
-              <span class="fl-item-ic">${icon}</span>
+              <span class="fl-item-ic"><os-icon name="${icon}" size="18"></os-icon></span>
               <span class="fl-item-name">${file}</span>
               <span class="fl-item-meta">${size}</span>
             </div>`;

@@ -47,13 +47,13 @@
 
       // 天气小组件
       const temp = 18 + Math.floor(Math.random() * 12);
-      const conds = ['☀', '⛅', '☁', '🌧', '⛈'];
+      const conds = ['晴', '多云', '阴', '小雨', '雷阵雨'];
       const cond = conds[Math.floor(Math.random() * conds.length)];
       const weatherWidget = document.createElement('div');
       weatherWidget.className = 'hw-widget hw-weather';
       weatherWidget.innerHTML = `
         <div class="hw-ww-temp">${temp}°</div>
-        <div class="hw-ww-cond">${cond} 上海</div>`;
+        <div class="hw-ww-cond"><os-icon name="weather" size="14"></os-icon> ${cond} · 上海</div>`;
       weatherWidget.addEventListener('click', () => OS.nav.push('weather'));
       grid.appendChild(weatherWidget);
 

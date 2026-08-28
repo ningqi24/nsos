@@ -25,6 +25,8 @@
   pointer-events: none;
 }
 #os-sysui > * { pointer-events: auto; }
+/* 锁屏模式：sysui 子元素不拦截事件，确保上滑解锁手势畅通 */
+#os-sysui.sysui-lockmode > * { pointer-events: none; }
 /* 开机 / 工程模式 / 关机时状态栏整体隐藏，不可见亦不可交互 */
 #os-sysui[hidden] { display: none !important; }
 

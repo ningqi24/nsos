@@ -298,8 +298,10 @@
 .hw-bat-label { font-size: 11px; color: var(--os-fg-1); }
 .hw-battery.low .hw-bat-pct { color: var(--os-danger); }
 .hw-battery.charging .hw-bat-pct::after {
-  content: ' ⚡';
-  font-size: 16px;
+  content: ' · 充电中';
+  font-size: 11px;
+  color: var(--os-success);
+  font-weight: 400;
 }
 
 /* ---------- 搜索栏 ---------- */
@@ -1524,15 +1526,14 @@
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.ob-illust {
-  font-size: 48px;
-  margin-bottom: 8px;
-  animation: ob-bounce .6s var(--os-ease-spring) both;
-}
-@keyframes ob-bounce {
-  0% { transform: scale(0) rotate(-20deg); }
-  60% { transform: scale(1.15) rotate(5deg); }
-  100% { transform: scale(1) rotate(0); }
+.ob-step-num {
+  font-size: 56px;
+  font-weight: 200;
+  letter-spacing: -2px;
+  color: var(--os-fg-1);
+  margin-bottom: 12px;
+  opacity: 0.9;
+  font-variant-numeric: tabular-nums;
 }
 .ob-page h2 {
   font-size: 18px;

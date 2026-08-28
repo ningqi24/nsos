@@ -133,7 +133,7 @@
     /* 充电 Toast 提示 */
     _showChargeToast(level) {
       const toast = OS.ui && OS.ui.toast;
-      if (toast) toast('⚡ 正在充电 ' + level + '%', { ms: 1500 });
+      if (toast) toast('正在充电 ' + level + '%', { ms: 1500 });
     },
 
     /* 低电量横幅 */
@@ -142,7 +142,7 @@
       if (!sysui) return;
       const banner = document.createElement('div');
       banner.className = 'battery-low-banner';
-      banner.innerHTML = `<span>🔋</span><span>电量仅剩 ${level}%，请尽快充电</span>`;
+      banner.innerHTML = `<span class="blb-ic"><os-icon name="battery" size="16"></os-icon></span><span>电量仅剩 ${level}%，请尽快充电</span>`;
       sysui.appendChild(banner);
       requestAnimationFrame(() => banner.classList.add('show'));
       setTimeout(() => {
