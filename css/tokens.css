@@ -29,7 +29,14 @@
   --os-danger:      #f2574c;
 
   --os-glass:       rgba(255,255,255,.06); /* 毛玻璃基底 */
+  --os-glass-strong: rgba(255,255,255,.10);
+  --os-glass-border: rgba(255,255,255,.10);  /* 毛玻璃描边 */
+  --os-glass-border-strong: rgba(255,255,255,.16);
   --os-border:      rgba(255,255,255,.1);  /* 描边 */
+  --os-blur:        blur(20px) saturate(180%);
+  --os-blur-strong: blur(30px) saturate(200%);
+  --os-shadow-card: 0 4px 24px rgba(0,0,0,.3);
+  --os-shadow-float: 0 8px 40px rgba(0,0,0,.4);
 
   /* ================= 间距（4 进制） ================= */
   --os-space-1: 4px;

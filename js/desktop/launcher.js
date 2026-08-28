@@ -31,7 +31,7 @@
       this._buildDrawer();
     },
 
-    /* 桌面小组件：时钟 + 天气 + 日历 + 电池 */
+    /* 桌面小组件：时钟 + 天气 */
     _buildWidgets() {
       const grid = document.querySelector('.launcher-grid');
       if (!grid) return;
@@ -57,40 +57,6 @@
       weatherWidget.addEventListener('click', () => OS.nav.push('weather'));
       grid.appendChild(weatherWidget);
 
-      // 日历小组件
-      const now = new Date();
-      const calendarWidget = document.createElement('div');
-      calendarWidget.className = 'hw-widget hw-calendar';
-      calendarWidget.innerHTML = `
-        <div class="hw-cal-day">${now.getDate()}</div>
-        <div class="hw-cal-month">${now.getMonth() + 1}月 · 周${['日','一','二','三','四','五','六'][now.getDay()]}</div>`;
-      calendarWidget.addEventListener('click', () => OS.nav.push('calendar'));
-      grid.appendChild(calendarWidget);
-
-      // 电池小组件
-      const batteryWidget = document.createElement('div');
-      batteryWidget.className = 'hw-widget hw-battery';
-      batteryWidget.innerHTML = `
-        <div class="hw-bat-pct">--%</div>
-        <div class="hw-bat-label">电池</div>`;
-      grid.appendChild(batteryWidget);
-
-      // 更新电池信息
-      const updateBattery = () => {
-        const b = OS.device && OS.device.battery;
-        const pctEl = batteryWidget.querySelector('.hw-bat-pct');
-        if (b && OS.device.batterySupported) {
-          const level = Math.round(b.level * 100);
-          pctEl.textContent = level + '%';
-          batteryWidget.classList.toggle('low', level <= 20 && !b.charging);
-          batteryWidget.classList.toggle('charging', !!b.charging);
-        } else {
-          pctEl.textContent = '100%';
-        }
-      };
-      updateBattery();
-      OS.bus.on('device:update', updateBattery);
-
       // 更新时钟
       const pad = n => String(n).padStart(2, '0');
       const tick = () => {
@@ -99,11 +65,6 @@
         const dEl = clockWidget.querySelector('#hw-cw-date');
         if (tEl) tEl.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes());
         if (dEl) dEl.textContent = (now.getMonth() + 1) + '月' + now.getDate() + '日 周' + ['日','一','二','三','四','五','六'][now.getDay()];
-        // 更新日历小组件日期
-        const calDay = calendarWidget.querySelector('.hw-cal-day');
-        const calMonth = calendarWidget.querySelector('.hw-cal-month');
-        if (calDay) calDay.textContent = now.getDate();
-        if (calMonth) calMonth.textContent = (now.getMonth() + 1) + '月 · 周' + ['日','一','二','三','四','五','六'][now.getDay()];
       };
       tick();
       setInterval(tick, 1000);
@@ -149,13 +110,13 @@
       OS.apps.dock().forEach((app) => dock.appendChild(this._makeIcon(app)));
     },
 
-    /* 页面指示器（小圆点）- 点击打开全部应用抽屉 */
+    /* 所有应用入口按钮 - 点击打开全部应用抽屉 */
     _buildPageIndicator() {
       const launcher = document.querySelector('.launcher');
       if (!launcher) return;
       const indicator = document.createElement('div');
-      indicator.className = 'hw-page-dots';
-      indicator.innerHTML = '<span class="hw-dot active"></span><span class="hw-dot"></span>';
+      indicator.className = 'hw-all-apps-btn';
+      indicator.innerHTML = '<os-icon name="apps" size="16"></os-icon><span>所有应用</span><os-icon name="search" size="14"></os-icon>';
       indicator.style.cursor = 'pointer';
       indicator.addEventListener('click', () => this.openDrawer());
       launcher.insertBefore(indicator, launcher.querySelector('.launcher-dock'));

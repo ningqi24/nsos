@@ -1198,7 +1198,11 @@
 
       // 切换播放/暂停按钮图标（不重建 DOM）
       const updatePlayBtn = () => {
-        if (dom.playBtn) dom.playBtn.textContent = playing ? '⏸' : '▶';
+        if (dom.playBtn) {
+          dom.playBtn.innerHTML = playing
+            ? '<os-icon name="pause" size="22"></os-icon>'
+            : '<os-icon name="play" size="22"></os-icon>';
+        }
         if (dom.album) dom.album.classList.toggle('playing', playing);
       };
 
@@ -1243,9 +1247,9 @@
               <div class="ms-times"><span class="ms-cur">${fmtTime(progress)}</span><span class="ms-dur">${fmtTime(t.dur)}</span></div>
             </div>
             <div class="ms-controls">
-              <button class="ms-btn" id="ms-prev">⏮</button>
-              <button class="ms-btn ms-play" id="ms-play">${playing ? '⏸' : '▶'}</button>
-              <button class="ms-btn" id="ms-next">⏭</button>
+              <button class="ms-btn" id="ms-prev"><os-icon name="skip-prev" size="20"></os-icon></button>
+              <button class="ms-btn ms-play" id="ms-play">${playing ? '<os-icon name="pause" size="22"></os-icon>' : '<os-icon name="play" size="22"></os-icon>'}</button>
+              <button class="ms-btn" id="ms-next"><os-icon name="skip-next" size="20"></os-icon></button>
             </div>
             <div class="ms-playlist">
               <div class="ms-pl-title">播放列表</div>
@@ -1386,8 +1390,8 @@
             }).join('')}
           </div>
           <div class="ph-call-row">
-            <button class="ph-call-btn" id="ph-call">📞</button>
-            <button class="ph-del-btn" id="ph-del">⌫</button>
+            <button class="ph-call-btn" id="ph-call"><os-icon name="phone" size="28"></os-icon></button>
+            <button class="ph-del-btn" id="ph-del"><os-icon name="backspace" size="22"></os-icon></button>
           </div>
         </div>`;
       const display = host.querySelector('#ph-dial');

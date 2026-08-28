@@ -50,9 +50,9 @@
             </div>
           </div>
           <div class="cc-media-controls">
-            <button class="cc-media-btn" id="cc-m-prev">⏮</button>
-            <button class="cc-media-btn cc-media-play" id="cc-m-play">▶</button>
-            <button class="cc-media-btn" id="cc-m-next">⏭</button>
+            <button class="cc-media-btn" id="cc-m-prev"><os-icon name="skip-prev" size="18"></os-icon></button>
+            <button class="cc-media-btn cc-media-play" id="cc-m-play"><os-icon name="play" size="20"></os-icon></button>
+            <button class="cc-media-btn" id="cc-m-next"><os-icon name="skip-next" size="18"></os-icon></button>
           </div>
         </div>
         <div class="cc-toggles"></div>
@@ -151,7 +151,9 @@
 
       playBtn.addEventListener('click', () => {
         isPlaying = !isPlaying;
-        playBtn.textContent = isPlaying ? '⏸' : '▶';
+        playBtn.innerHTML = isPlaying
+          ? '<os-icon name="pause" size="20"></os-icon>'
+          : '<os-icon name="play" size="20"></os-icon>';
         mediaEl.classList.toggle('playing', isPlaying);
         const titleEl = mediaEl.querySelector('.cc-media-title');
         const artistEl = mediaEl.querySelector('.cc-media-artist');
@@ -162,13 +164,14 @@
           titleEl.textContent = '已暂停';
           artistEl.textContent = '光年之外';
         }
+        OS.bus.emit('media:toggle', { playing: isPlaying });
       });
 
       this.panel.querySelector('#cc-m-prev').addEventListener('click', () => {
-        const toast = OS.ui && OS.ui.toast; if (toast) toast('⏮ 上一曲', { ms: 800 });
+        const toast = OS.ui && OS.ui.toast; if (toast) toast('上一曲', { ms: 800 });
       });
       this.panel.querySelector('#cc-m-next').addEventListener('click', () => {
-        const toast = OS.ui && OS.ui.toast; if (toast) toast('⏭ 下一曲', { ms: 800 });
+        const toast = OS.ui && OS.ui.toast; if (toast) toast('下一曲', { ms: 800 });
       });
     },
 
