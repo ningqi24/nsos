@@ -239,7 +239,7 @@
           <div class="ob-card">
             <div class="ob-header">
               <div class="ob-logo">nsos</div>
-              <div class="ob-version">b0.2.0 Aurora</div>
+              <div class="ob-version">b0.2.1 Aurora</div>
             </div>
             <div class="ob-pages">
               <div class="ob-page active" data-step="1">

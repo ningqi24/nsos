@@ -2,6 +2,24 @@
   "updated": "2026-08-28T00:00:00Z",
   "packages": [
     {
+      "name": "nsos-ota-b0.2.1.zip",
+      "version": "0.2.1",
+      "codename": "Aurora",
+      "size": 258048,
+      "size_text": "252 KB",
+      "released": "2026-08-28",
+      "channel": "stable",
+      "changelog": [
+        "OTA 在线更新系统全面重构",
+        "更新源从线上 ota/manifest.json 获取，强制不读缓存",
+        "设置应用系统更新界面改为列表展示所有更新包",
+        "新增 ota update 命令，支持 -r 清空缓存强制更新",
+        "修复锁屏上滑无法进入桌面的问题",
+        "降低上滑解锁阈值，优化跟手手感",
+        "document 级 capture 手势监听，避免被 sysui 阻挡"
+      ]
+    },
+    {
       "name": "nsos-ota-b0.2.0.zip",
       "version": "0.2.0",
       "codename": "Aurora",

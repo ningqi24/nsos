@@ -12,9 +12,9 @@
   const OS = global.OS;
 
   const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
-  const THRESHOLD = 80;      // 上滑解锁阈值（px），降低阈值更容易解锁
-  const RUBBER = 0.6;        // 拖拽阻尼系数（跟手感）
-  const ANIM_MS = 420;       // 解锁过渡时长（ms）
+  const THRESHOLD = 60;      // 上滑解锁阈值（px），降低让解锁更容易
+  const RUBBER = 0.65;       // 拖拽阻尼系数（跟手感），提高让跟手感更强
+  const ANIM_MS = 380;       // 解锁过渡时长（ms）
 
   OS.reg('locked', {
     layer: null,
@@ -37,8 +37,10 @@
       this.notifsEl = this.layer.querySelector('#lock-notifs');
 
       // 确保锁屏层高优先级接收事件
-      this.layer.style.zIndex = '100';
+      this.layer.style.zIndex = '500';
       this.layer.style.touchAction = 'none';
+      this.layer.style.userSelect = 'none';
+      this.layer.style.webkitUserSelect = 'none';
 
       this._buildShortcuts();
       this._render();
@@ -206,27 +208,28 @@
         grip.addEventListener('click', () => self._unlock());
       }
 
-      // 在 document 级别也监听上滑手势（防止被 sysui 子元素阻挡）
+      // 在 document 级别也监听上滑手势（capture 阶段，防止被 sysui 子元素阻挡）
       let docStartY = null, docStartX = null, docTracking = false, docMaxPull = 0;
       document.addEventListener('pointerdown', (e) => {
         if (OS.state.current !== 'locked' || self._unlocking) return;
-        // 只监听从下半屏开始的滑动（更符合上滑解锁的直觉）
-        if (e.clientY < window.innerHeight * 0.3) return;
+        // 从屏幕下半部分开始的滑动才触发（符合上滑解锁直觉）
+        if (e.clientY < window.innerHeight * 0.25) return;
         docStartY = e.clientY;
         docStartX = e.clientX;
         docTracking = true;
         docMaxPull = 0;
-      });
+      }, true); // capture 阶段捕获
       document.addEventListener('pointermove', (e) => {
         if (!docTracking || docStartY === null) return;
         if (OS.state.current !== 'locked' || self._unlocking) return;
         const dy = docStartY - e.clientY;
         const dx = Math.abs(e.clientX - docStartX);
-        if (dx > Math.abs(dy) * 1.5 && docMaxPull < 20) return;
+        // 放宽水平移动限制，只要主要方向是上滑即可
+        if (dx > Math.abs(dy) * 2 && docMaxPull < 30) return;
         if (dy > docMaxPull) docMaxPull = dy;
         const pull = dy > 0 ? dy * RUBBER : 0;
         if (self.content) self.content.style.transform = `translateY(${-pull}px)`;
-      });
+      }, true);
       document.addEventListener('pointerup', () => {
         if (!docTracking) return;
         docTracking = false;
@@ -236,14 +239,14 @@
         docMaxPull = 0;
         if (maxPull > THRESHOLD) { self._unlock(); return; }
         self._bounceBack();
-      });
+      }, true);
       document.addEventListener('pointercancel', () => {
         docTracking = false;
         docStartY = null;
         docStartX = null;
         docMaxPull = 0;
         self._bounceBack();
-      });
+      }, true);
     },
 
     /* 未达阈值：内容回弹到原位 */
@@ -260,19 +263,30 @@
 
     /* 解锁：整层上移淡出过渡后进入桌面 */
     _unlock() {
-      if (this._unlocking) return;
-      this._unlocking = true;
+      const self = this;
+      if (self._unlocking) return;
+      self._unlocking = true;
 
-      if (this.content) {
-        this.content.style.transition = 'transform ' + ANIM_MS + 'ms cubic-bezier(.35,.7,.2,1)';
-        this.content.style.transform = 'translateY(-120%)';
+      // 强制 reflow，确保 transition 生效
+      if (self.content) {
+        self.content.style.transition = 'none';
+        void self.content.offsetHeight; // reflow
+        self.content.style.transition = 'transform ' + ANIM_MS + 'ms cubic-bezier(.35,.7,.2,1)';
+        requestAnimationFrame(() => {
+          if (self.content) self.content.style.transform = 'translateY(-120%)';
+        });
       }
-      this.layer.style.transition = 'opacity ' + ANIM_MS + 'ms ease';
-      this.layer.style.opacity = '0';
+      self.layer.style.transition = 'none';
+      void self.layer.offsetHeight;
+      self.layer.style.transition = 'opacity ' + ANIM_MS + 'ms ease';
+      requestAnimationFrame(() => {
+        self.layer.style.opacity = '0';
+      });
 
       setTimeout(() => {
-        this._reset();
+        // 先转换状态（LayerManager 会隐藏锁屏层），再重置样式
         OS.state.transition('home', { source: 'unlock' });
+        requestAnimationFrame(() => self._reset());
       }, ANIM_MS);
     },
 

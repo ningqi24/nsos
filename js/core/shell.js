@@ -559,8 +559,8 @@
 
   SHELL.register({
     name: 'ota',
-    desc: '系统更新（check / list / apply / cache，更新源为线上 https://当前路径/ota/manifest.json；cache 为浏览器本地缓存更新）',
-    usage: 'ota check | ota list | ota source | ota apply <package.zip> | ota cache [apply <url>]',
+    desc: '系统更新（check / list / update / apply / cache，更新源为线上 https://当前路径/ota/manifest.json；cache 为浏览器本地缓存更新）',
+    usage: 'ota check | ota list | ota source | ota update [-r] | ota apply <package.zip> | ota cache [apply <url>]',
     async run(ctx) {
       const sub = (ctx.args[1] || 'check').toLowerCase();
       const source = SHELL.otaSource();
@@ -626,6 +626,65 @@
         if (sdPkgs.length > 0) {
           ctx.push(ctx.line('/sdcard 本地更新包 (' + sdPkgs.length + ' 个):', K.sys));
           sdPkgs.forEach(p => ctx.push(ctx.line('  ' + p.s + '   v' + p.major + '.' + p.minor + '.' + p.build, K.out)));
+        }
+        return;
+      }
+      if (sub === 'update') {
+        const forceClear = ctx.args[2] === '-r' || ctx.args[2] === '--reset-cache';
+        const local = OS.ota && OS.ota.local;
+        if (!local) { ctx.push(ctx.line('ota update: 当前环境不支持 Service Worker / Cache API', K.err)); return; }
+
+        ctx.push(ctx.line('OTA 源: ' + source, K.sys));
+
+        // -r 模式：先清空本地缓存
+        if (forceClear) {
+          ctx.push(ctx.line('正在清空本地缓存...', K.warn));
+          try {
+            await local.clear();
+            ctx.push(ctx.line('本地缓存已清空', K.ok));
+          } catch (e) {
+            ctx.push(ctx.line('清空缓存失败: ' + (e && e.message ? e.message : e), K.err));
+          }
+        }
+
+        // 拉取线上 manifest
+        const onlinePkgs = await fetchOnlinePkgs();
+        if (!onlinePkgs || onlinePkgs.length === 0) {
+          ctx.push(ctx.line('线上无可用更新包（或无法访问 ota 源）', K.err));
+          return;
+        }
+
+        const cur = OS.version;
+        // 找到最新版本
+        const latest = onlinePkgs[onlinePkgs.length - 1];
+        const isNewer = newerThan(latest, cur);
+
+        if (!isNewer && !forceClear) {
+          ctx.push(ctx.line(`已是最新版本 v${cur.major}.${cur.minor}.${cur.build}`, K.ok));
+          return;
+        }
+
+        if (!isNewer && forceClear) {
+          ctx.push(ctx.line(`当前已是 v${cur.major}.${cur.minor}.${cur.build}，但 -r 强制重新安装同版本`, K.warn));
+        } else {
+          ctx.push(ctx.line(`发现更新: v${latest.major}.${latest.minor}.${latest.build}${latest.codename ? ' "' + latest.codename + '"' : ''}`, K.ok));
+        }
+
+        const pkgUrl = latest.url;
+        if (!pkgUrl) {
+          ctx.push(ctx.line('错误: 更新包缺少下载地址', K.err));
+          return;
+        }
+
+        ctx.push(ctx.line('下载地址: ' + pkgUrl, K.out));
+        ctx.push(ctx.line('正在下载并安装更新包...', K.out));
+
+        try {
+          const r = await local.applyFromUrl(pkgUrl);
+          ctx.push(ctx.line('更新成功: ' + r.ver + '（' + r.fileCount + ' 个文件）', K.ok));
+          ctx.push(ctx.line('刷新页面生效。', K.ok));
+        } catch (e) {
+          ctx.push(ctx.line('更新失败: ' + (e && e.message ? e.message : e), K.err));
         }
         return;
       }
