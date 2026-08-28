@@ -11,6 +11,7 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--os-bg-0);
+  isolation: isolate; /* 创建堆叠上下文，防止子元素 z-index 逃逸 */
   /* 过渡动画统一走动画引擎，默认无显隐动画 */
 }
 
