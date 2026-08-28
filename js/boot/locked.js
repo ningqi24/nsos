@@ -72,7 +72,9 @@
         if (!this._tracking || this._startY === null) return;
         if (this._unlocking || OS.state.current !== 'locked') return;
         const dy = this._startY - e.clientY;      // 向上为正
+        if (dy > this._maxPull) this._maxPull = dy;
         const pull = dy > 0 ? dy * RUBBER : 0;    // 仅上滑跟手，下滑忽略
+        this._lastY = e.clientY;
         if (this.content) this.content.style.transform = `translateY(${-pull}px)`;
       });
 
@@ -80,14 +82,17 @@
         if (!this._tracking) return;
         this._tracking = false;
         const dy = this._startY === null ? 0 : this._startY - (this._lastY || 0);
+        const maxPull = this._maxPull || dy;
         this._startY = null;
-        if (dy > THRESHOLD) { this._unlock(); return; }
+        this._maxPull = 0;
+        if (maxPull > THRESHOLD) { this._unlock(); return; }
         this._bounceBack();      // 未达阈值：回弹，不解锁
       });
 
       layer.addEventListener('pointercancel', () => {
         this._tracking = false;
         this._startY = null;
+        this._maxPull = 0;
         this._bounceBack();
       });
     },
