@@ -77,6 +77,8 @@
 /* ---------- 真锁屏 ---------- */
 #layer-locked {
   justify-content: flex-end;
+  overflow: hidden;
+  will-change: opacity;
   background:
     radial-gradient(circle at 78% 12%, rgba(239,159,55,.08), transparent 52%),
     var(--os-bg-0);
