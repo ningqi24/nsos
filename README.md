@@ -14,12 +14,14 @@ nsos/
 │   ├── desktop.css    # 桌面层：状态栏 / 锁屏 / Launcher
 │   └── terminal.css   # 终端应用窗口 / 工程模式内嵌终端
 └── js/
-    ├── main.js        # 入口（应用窗口渲染）
+    ├── main.js        # 入口（装配内核 + LayerManager）
     ├── boot/          # 引导链：boot / input / locked / modes
     ├── desktop/       # 桌面层：statusbar / launcher
     ├── core/          # 内核：core / event-bus / state-machine / storage /
-    │                  #       device（真实设备信息）/ shell（统一命令引擎）
-    └── ui/            # Web Components：os-icon / os-terminal 等
+    │                  #       device（真实设备信息）/ shell（统一命令引擎）/
+    │                  #       app-registry（应用注册表）/ navigation（应用任务栈）
+    ├── apps/          # 内置应用 manifest（builtin-apps.js）
+    └── ui/            # Web Components：os-icon / os-terminal / os-settings 等
 ```
 
 ## 终端底层（统一命令引擎）
@@ -41,7 +43,8 @@ nsos/
 - 事件总线解耦模块通信；本地持久化存储
 - Fastboot / Recovery 引导（音量键）；工程模式菜单动作统一走 shell 命令，含解锁 Bootloader、内嵌命令行
 - 真锁屏：大字时钟 + 日期，上滑/点击解锁
-- 桌面 Launcher：图标网格 + Dock，点击进入应用；「终端」为真实应用，其余 P5 占位
+- 桌面 Launcher：图标网格 + Dock，完全由应用注册表（`OS.apps`）数据驱动——注册一个 manifest 即自动上桌，与内核零耦合
+- **应用体系（manifest 插拔式，借鉴 MobileGym 架构）**：每应用一份 manifest（`id/name/icon/mount/routes`），`js/apps/builtin-apps.js` 统一注册；`OS.nav` 维护应用任务栈，支持应用内路由、跨应用入栈、返回回退（栈空回桌面）。已真实实现：设置 / 终端 / 时钟；其余应用 P5 占位（渲染走统一占位兜底）
 - 状态栏常驻：时间 / 信号 / 真实电量（实时监听充电/电量变化）；双击状态栏锁定回锁屏
 
 ## 终端命令速览
