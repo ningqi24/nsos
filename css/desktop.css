@@ -1589,7 +1589,8 @@
  * 首次使用引导页 (Onboarding)
  * Apple-style setup wizard with glassmorphism
  * ============================================================ */
-.onboarding-overlay {
+/* onboarding overlay：使用 #os-sysui 前缀提高特异性，覆盖 #os-sysui > * 的默认规则 */
+#os-sysui .onboarding-overlay {
   position: fixed;
   inset: 0;
   z-index: 9998;
@@ -1603,8 +1604,8 @@
   pointer-events: none;
   transition: opacity .4s var(--os-ease-ios);
 }
-.onboarding-overlay.show { opacity: 1; pointer-events: auto; }
-.onboarding-overlay.hide {
+#os-sysui .onboarding-overlay.show { opacity: 1; pointer-events: auto; }
+#os-sysui .onboarding-overlay.hide {
   opacity: 0;
   pointer-events: none;
 }
@@ -1781,7 +1782,8 @@
  * Spotlight 全局搜索
  * Apple-style pull-down search overlay
  * ============================================================ */
-.spotlight-overlay {
+/* spotlight overlay：使用 #os-sysui 前缀提高特异性，覆盖 #os-sysui > * 的默认规则 */
+#os-sysui .spotlight-overlay {
   position: fixed;
   inset: 0;
   z-index: 9995;
@@ -1796,7 +1798,7 @@
   pointer-events: none;
   transition: opacity .3s var(--os-ease-ios);
 }
-.spotlight-overlay.show {
+#os-sysui .spotlight-overlay.show {
   opacity: 1;
   pointer-events: auto;
 }
