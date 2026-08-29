@@ -13,8 +13,8 @@
 
   const OS = global.OS;
 
-  const TOP_ZONE = 70;       // 顶部触发区域高度
-  const PULL_THRESHOLD = 24; // 下滑触发阈值
+  const TOP_ZONE = 120;       // 顶部触发区域高度（增大，更容易触发）
+  const PULL_THRESHOLD = 16;  // 下滑触发阈值（降低，更灵敏）
 
   OS.reg('gesture', {
     init() {

@@ -551,7 +551,7 @@
           ota.applyFromUrl(url).then((r) => {
             btn.textContent = '安装完成';
             if (statusEl) {
-              statusEl.innerHTML = `<span class="st-ota-state st-ota-ok">✓ ${r.ver} 安装成功，共 ${r.fileCount} 个文件</span>`;
+              statusEl.innerHTML = `<span class="st-ota-state st-ota-ok"><os-icon name="check" size="14"></os-icon> ${r.ver} 安装成功，共 ${r.fileCount} 个文件</span>`;
             }
             if (OS.ui && OS.ui.toast) OS.ui.toast('更新成功，刷新页面生效', { ms: 3000 });
             if (OS.notify) {
@@ -961,68 +961,9 @@
   });
 
   /* ============================================================
-   * 真实应用 5：天气（模拟数据 · 精美 UI）
+   * 真实应用 5：天气（已移除 — 模拟数据违反设计理念）
    * ============================================================ */
-  OS.apps.register({
-    id: 'weather',
-    name: '天气',
-    icon: 'weather',
-    cls: 'ic-cyan',
-    version: '1.0.0',
-    description: '天气预报（模拟数据）',
-    mount(host) {
-      const conditions = ['晴', '多云', '阴', '小雨', '中雨', '雷阵雨', '小雪', '雾'];
-      const temp = 18 + Math.floor(Math.random() * 12);
-      const cond = conditions[Math.floor(Math.random() * conditions.length)];
-      const feelTemp = temp + Math.floor(Math.random() * 6 - 3);
-      const humidity = 40 + Math.floor(Math.random() * 40);
-      const wind = 2 + Math.floor(Math.random() * 8);
-      const aqi = 20 + Math.floor(Math.random() * 80);
-
-      let hourlyHtml = '';
-      const nowHour = new Date().getHours();
-      for (let i = 0; i < 12; i++) {
-        const h = (nowHour + i) % 24;
-        const t = temp + Math.floor(Math.random() * 8 - 4);
-        const c = conditions[Math.floor(Math.random() * conditions.length)];
-        hourlyHtml += `<div class="wt-hour"><span class="wt-h-time">${i === 0 ? '现在' : h + '时'}</span><span class="wt-h-icon"><os-icon name="weather" size="18"></os-icon></span><span class="wt-h-temp">${t}°</span></div>`;
-      }
-
-      let dailyHtml = '';
-      const days = ['今天', '明天', '后天', '周三', '周四', '周五', '周六'];
-      for (let i = 0; i < 7; i++) {
-        const hi = temp + Math.floor(Math.random() * 8);
-        const lo = temp - Math.floor(Math.random() * 8);
-        const c = conditions[Math.floor(Math.random() * conditions.length)];
-        dailyHtml += `<div class="wt-day"><span class="wt-d-name">${days[i]}</span><span class="wt-d-icon"><os-icon name="weather" size="16"></os-icon></span><span class="wt-d-lo">${lo}°</span><div class="wt-d-bar"><i style="left:${lo + 10}%;width:${hi - lo + 5}%"></i></div><span class="wt-d-hi">${hi}°</span></div>`;
-      }
-
-      host.innerHTML = `
-        <div class="app-weather">
-          <div class="wt-hero">
-            <div class="wt-loc">上海</div>
-            <div class="wt-temp">${temp}°</div>
-            <div class="wt-cond">${cond}</div>
-            <div class="wt-feel">体感 ${feelTemp}°</div>
-          </div>
-          <div class="wt-card">
-            <div class="wt-card-title">逐时预报</div>
-            <div class="wt-hours">${hourlyHtml}</div>
-          </div>
-          <div class="wt-card">
-            <div class="wt-card-title">每日预报</div>
-            <div class="wt-days">${dailyHtml}</div>
-          </div>
-          <div class="wt-grid">
-            <div class="wt-info"><span class="wt-info-label">湿度</span><span class="wt-info-val">${humidity}%</span></div>
-            <div class="wt-info"><span class="wt-info-label">风速</span><span class="wt-info-val">${wind} m/s</span></div>
-            <div class="wt-info"><span class="wt-info-label">空气质量</span><span class="wt-info-val">${aqi}</span></div>
-            <div class="wt-info"><span class="wt-info-label">紫外线</span><span class="wt-info-val">${aqi > 60 ? '弱' : '中'}</span></div>
-          </div>
-        </div>`;
-      return () => {};
-    },
-  });
+  // 天气 app 已移除：所有数据均为随机生成的假数据，违反"无假数据"设计理念
 
   /* ============================================================
    * 真实应用 6：备忘录（localStorage CRUD）
@@ -1118,20 +1059,20 @@
       host.innerHTML = `
         <div class="app-browser">
           <div class="br-toolbar">
-            <button class="br-btn" id="br-back">‹</button>
-            <button class="br-btn" id="br-fwd">›</button>
+            <button class="br-btn" id="br-back"><os-icon name="chevron-left" size="16"></os-icon></button>
+            <button class="br-btn" id="br-fwd"><os-icon name="chevron-right" size="16"></os-icon></button>
             <div class="br-addr-wrap">
-              <input class="br-addr" id="br-addr" type="text" placeholder="搜索或输入网址" value="https://www.bing.com">
+              <input class="br-addr" id="br-addr" type="text" placeholder="搜索或输入网址" value="https://search.astras.cc">
             </div>
-            <button class="br-btn" id="br-go">→</button>
+            <button class="br-btn" id="br-go"><os-icon name="arrow-right" size="16"></os-icon></button>
           </div>
           <div class="br-quick">
-            <button class="br-quick-item" data-url="https://www.bing.com">搜索</button>
+            <button class="br-quick-item" data-url="https://search.astras.cc">搜索</button>
             <button class="br-quick-item" data-url="https://github.com">GitHub</button>
             <button class="br-quick-item" data-url="https://wikipedia.org">百科</button>
             <button class="br-quick-item" data-url="https://youtube.com">视频</button>
           </div>
-          <iframe class="br-frame" id="br-frame" src="https://www.bing.com" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+          <iframe class="br-frame" id="br-frame" src="https://search.astras.cc" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
         </div>`;
       const frame = host.querySelector('#br-frame');
       const addr = host.querySelector('#br-addr');
@@ -1145,7 +1086,7 @@
           if (url.includes('.') && !url.includes(' ')) {
             url = 'https://' + url;
           } else {
-            url = 'https://www.bing.com/search?q=' + encodeURIComponent(url);
+            url = 'https://search.astras.cc?q=' + encodeURIComponent(url);
           }
         }
         frame.src = url;
@@ -1165,38 +1106,80 @@
   });
 
   /* ============================================================
-   * 真实应用 8：音乐播放器（模拟数据 · 现代 UI · 轻量更新）
+   * 真实应用 8：音乐播放器（Web Audio 真实发声 · 纯色 UI）
    * ============================================================ */
   OS.apps.register({
     id: 'music',
     name: '音乐',
     icon: 'music',
     cls: 'ic-purple',
-    version: '2.0.0',
-    description: '音乐播放器',
+    version: '3.0.0',
+    description: '音乐播放器（Web Audio 合成）',
     mount(host) {
       const tracks = [
-        { title: '夜空下的星', artist: '光年之外', dur: 215, color: '#a452ff' },
-        { title: '晨曦微光', artist: '黎明之子', dur: 192, color: '#ff6b5e' },
-        { title: '海风轻语', artist: '潮汐乐队', dur: 248, color: '#2dd4d0' },
-        { title: '都市霓虹', artist: 'DJ Electron', dur: 176, color: '#ef9f37' },
-        { title: '山谷回声', artist: '自然之声', dur: 305, color: '#34d399' },
+        { title: '夜空下的星', artist: '光年之外', dur: 215, color: '#a452ff', freq: 220 },
+        { title: '晨曦微光', artist: '黎明之子', dur: 192, color: '#ff6b5e', freq: 262 },
+        { title: '海风轻语', artist: '潮汐乐队', dur: 248, color: '#2dd4d0', freq: 294 },
+        { title: '都市霓虹', artist: 'DJ Electron', dur: 176, color: '#ef9f37', freq: 330 },
+        { title: '山谷回声', artist: '自然之声', dur: 305, color: '#34d399', freq: 392 },
       ];
       let currentIdx = 0, playing = false, progress = 0, iv = null;
-      // DOM 引用缓存，避免每秒 querySelector
+      let audioCtx = null, osc = null, gainNode = null;
       let dom = {};
 
       const pad = s => String(Math.floor(s)).padStart(2, '0');
       const fmtTime = (s) => pad(s / 60) + ':' + pad(s % 60);
 
-      // 轻量更新：只改进度条 + 时间文字，不重建 DOM
+      // Web Audio 初始化（懒加载，用户首次点击时创建）
+      const initAudio = () => {
+        if (audioCtx) return;
+        try {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch(e) {
+          audioCtx = null;
+        }
+      };
+
+      const startSound = () => {
+        if (!audioCtx) return;
+        if (osc) return;
+        const t = tracks[currentIdx];
+        osc = audioCtx.createOscillator();
+        gainNode = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = t.freq;
+        gainNode.gain.value = 0;
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        osc.start();
+        // 淡入
+        gainNode.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.3);
+      };
+
+      const stopSound = () => {
+        if (!gainNode || !osc || !audioCtx) return;
+        // 淡出
+        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2);
+        const oldOsc = osc;
+        setTimeout(() => {
+          try { oldOsc.stop(); } catch(e) {}
+        }, 250);
+        osc = null;
+        gainNode = null;
+      };
+
       const updateProgress = () => {
         const t = tracks[currentIdx];
         if (dom.bar) dom.bar.style.width = (progress / t.dur * 100) + '%';
         if (dom.cur) dom.cur.textContent = fmtTime(progress);
+        // 轻微频率变化模拟"播放"
+        if (osc && audioCtx) {
+          const baseFreq = t.freq;
+          const vibrato = Math.sin(progress * 2) * 2;
+          osc.frequency.setValueAtTime(baseFreq + vibrato, audioCtx.currentTime);
+        }
       };
 
-      // 切换播放/暂停按钮图标（不重建 DOM）
       const updatePlayBtn = () => {
         if (dom.playBtn) {
           dom.playBtn.innerHTML = playing
@@ -1206,17 +1189,15 @@
         if (dom.album) dom.album.classList.toggle('playing', playing);
       };
 
-      // 切换曲目时的高亮（不重建 DOM）
       const updatePlaylistHighlight = () => {
         host.querySelectorAll('.ms-pl-item').forEach((el, i) => {
           el.classList.toggle('active', i === currentIdx);
         });
       };
 
-      // 切换曲目：更新标题/封面/时长等静态信息
       const updateTrackInfo = () => {
         const t = tracks[currentIdx];
-        if (dom.album) dom.album.style.background = `linear-gradient(135deg,${t.color},${t.color}88)`;
+        if (dom.album) dom.album.style.background = t.color;
         if (dom.root) dom.root.style.setProperty('--album-color', t.color);
         if (dom.title) dom.title.textContent = t.title;
         if (dom.artist) dom.artist.textContent = t.artist;
@@ -1227,15 +1208,28 @@
       };
 
       const switchTrack = (newIdx) => {
+        const wasPlaying = playing;
+        if (playing) {
+          stopSound();
+          playing = false;
+          updatePlayBtn();
+        }
         currentIdx = newIdx;
         updateTrackInfo();
+        if (wasPlaying) {
+          setTimeout(() => {
+            startSound();
+            playing = true;
+            updatePlayBtn();
+          }, 200);
+        }
       };
 
       const render = () => {
         const t = tracks[currentIdx];
         host.innerHTML = `
           <div class="app-music" style="--album-color:${t.color}">
-            <div class="ms-album rotating" style="background:linear-gradient(135deg,${t.color},${t.color}88)">
+            <div class="ms-album rotating" style="background:${t.color}">
               <div class="ms-album-art"><os-icon name="music" size="48"></os-icon></div>
             </div>
             <div class="ms-info">
@@ -1257,7 +1251,6 @@
             </div>
           </div>`;
 
-        // 缓存 DOM 引用
         dom = {
           root: host.querySelector('.app-music'),
           album: host.querySelector('.ms-album'),
@@ -1280,23 +1273,32 @@
       };
 
       const togglePlay = () => {
+        initAudio();
         playing = !playing;
         if (playing) {
+          startSound();
           iv = setInterval(() => {
             progress++;
             if (progress >= tracks[currentIdx].dur) {
               switchTrack((currentIdx + 1) % tracks.length);
             }
-            updateProgress(); // 轻量更新，不重建 DOM
+            updateProgress();
           }, 1000);
         } else {
+          stopSound();
           clearInterval(iv);
         }
         updatePlayBtn();
       };
 
       render();
-      return () => { clearInterval(iv); };
+      return () => {
+        clearInterval(iv);
+        stopSound();
+        if (audioCtx) {
+          try { audioCtx.close(); } catch(e) {}
+        }
+      };
     },
   });
 
@@ -1473,7 +1475,7 @@
             </div>
             <div class="msg-input-row">
               <input class="msg-input" id="msg-input" placeholder="输入消息…">
-              <button class="msg-send" id="msg-send">↑</button>
+              <button class="msg-send" id="msg-send"><os-icon name="send" size="18"></os-icon></button>
             </div>
           </div>`;
         host.querySelector('#msg-back').addEventListener('click', renderList);
@@ -1564,14 +1566,23 @@
     icon: 'camera',
     cls: 'ic-purple',
     dock: true,
-    version: '1.0.0',
-    description: '相机',
+    version: '2.0.0',
+    description: '相机（调用设备摄像头）',
     mount(host) {
+      let stream = null;
+      let facingMode = 'user';
+
       host.innerHTML = `
         <div class="app-camera">
-          <div class="cam-viewfinder">
+          <div class="cam-viewfinder" id="cam-viewfinder">
+            <video id="cam-video" autoplay playsinline muted></video>
             <div class="cam-grid-overlay"></div>
             <div class="cam-mode">照片</div>
+            <div class="cam-error" id="cam-error" style="display:none">
+              <os-icon name="camera" size="32"></os-icon>
+              <p>无法访问摄像头</p>
+              <p style="font-size:12px;opacity:.6">请确保已授予摄像头权限</p>
+            </div>
           </div>
           <div class="cam-modes">
             <span class="cam-mode-item">人像</span>
@@ -1580,23 +1591,76 @@
             <span class="cam-mode-item">全景</span>
           </div>
           <div class="cam-controls">
-            <div class="cam-thumb"></div>
+            <div class="cam-thumb" id="cam-thumb"></div>
             <button class="cam-shutter" id="cam-shutter"></button>
-            <button class="cam-flip" id="cam-flip">🔄</button>
+            <button class="cam-flip" id="cam-flip" title="切换摄像头">
+              <os-icon name="camera-flip" size="20"></os-icon>
+            </button>
           </div>
         </div>`;
+
+      const video = host.querySelector('#cam-video');
+      const errorEl = host.querySelector('#cam-error');
+      const thumb = host.querySelector('#cam-thumb');
       const shutter = host.querySelector('#cam-shutter');
+      const flipBtn = host.querySelector('#cam-flip');
+
+      const startCamera = async () => {
+        try {
+          if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+          }
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: facingMode },
+            audio: false
+          });
+          video.srcObject = stream;
+          video.style.display = 'block';
+          errorEl.style.display = 'none';
+        } catch (e) {
+          video.style.display = 'none';
+          errorEl.style.display = 'flex';
+        }
+      };
+
+      startCamera();
+
+      // 翻转摄像头
+      flipBtn.addEventListener('click', () => {
+        facingMode = facingMode === 'user' ? 'environment' : 'user';
+        startCamera();
+      });
+
+      // 拍照
       shutter.addEventListener('click', () => {
         shutter.classList.add('cam-flash');
         const vf = host.querySelector('.cam-viewfinder');
         vf.style.background = '#fff';
+
+        // 如果摄像头可用，捕获帧
+        if (stream && video.videoWidth > 0) {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            thumb.style.backgroundImage = `url(${dataUrl})`;
+            thumb.style.backgroundSize = 'cover';
+            thumb.style.backgroundPosition = 'center';
+          } catch(e) {}
+        }
+
         setTimeout(() => {
           vf.style.background = '';
           shutter.classList.remove('cam-flash');
-          if (OS.notify) OS.notify.post({ icon: 'camera', title: '已保存照片', text: '照片已保存到相册', app: 'camera' });
+          if (OS.notify) OS.notify.post({ icon: 'camera', title: '已保存照片', text: '照片已保存到相册', app: 'camera2' });
         }, 200);
       });
-      return () => {};
+
+      return () => {
+        if (stream) stream.getTracks().forEach(t => t.stop());
+      };
     },
   });
 
@@ -1658,7 +1722,7 @@
         }
 
         const eventsHtml = selectedDate && events[selectedDate]
-          ? events[selectedDate].map((e, i) => `<div class="cal-event" data-idx="${i}"><span class="cal-event-time">${e.time}</span><span class="cal-event-title">${e.title}</span><button class="cal-event-del" data-idx="${i}">×</button></div>`).join('')
+          ? events[selectedDate].map((e, i) => `<div class="cal-event" data-idx="${i}"><span class="cal-event-time">${e.time}</span><span class="cal-event-title">${e.title}</span><button class="cal-event-del" data-idx="${i}"><os-icon name="close" size="14"></os-icon></button></div>`).join('')
           : '<div class="cal-no-events">无事件</div>';
 
         host.innerHTML = `

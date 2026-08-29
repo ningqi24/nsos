@@ -125,47 +125,141 @@
         e.preventDefault();
         this._showContextMenu(app, e.clientX, e.clientY);
       });
-      // 长按进入编辑模式
+      // 长按进入编辑模式（短按拖动在编辑模式下直接触发）
       let pressTimer = null;
-      el.addEventListener('pointerdown', () => {
-        pressTimer = setTimeout(() => this.enterEditMode(), 500);
-      });
-      el.addEventListener('pointerup', () => clearTimeout(pressTimer));
-      el.addEventListener('pointerleave', () => clearTimeout(pressTimer));
-      // 编辑模式拖拽
-      el.draggable = true;
-      el.addEventListener('dragstart', (e) => {
-        if (!this.editMode) { e.preventDefault(); return; }
-        this.draggedIcon = el;
-        el.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-      });
-      el.addEventListener('dragend', () => {
-        el.classList.remove('dragging');
-        this.draggedIcon = null;
-        document.querySelectorAll('.drop-target').forEach(t => t.classList.remove('drop-target'));
-      });
-      el.addEventListener('dragover', (e) => {
-        if (!this.editMode || !this.draggedIcon) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        if (el !== this.draggedIcon) {
-          el.classList.add('drop-target');
+      let longPressFired = false;
+      el.addEventListener('pointerdown', (e) => {
+        if (e.button !== undefined && e.button !== 0) return;
+        longPressFired = false;
+        if (this.editMode) {
+          // 编辑模式下：直接开始拖动
+          this._startDrag(el, e.clientX, e.clientY);
+          e.preventDefault();
+        } else {
+          // 非编辑模式：长按进入编辑模式
+          pressTimer = setTimeout(() => {
+            longPressFired = true;
+            this.enterEditMode();
+            this._startDrag(el, e.clientX, e.clientY);
+          }, 500);
         }
       });
-      el.addEventListener('dragleave', () => el.classList.remove('drop-target'));
-      el.addEventListener('drop', (e) => {
-        e.preventDefault();
-        el.classList.remove('drop-target');
-        if (!this.editMode || !this.draggedIcon || el === this.draggedIcon) return;
-        // 创建新文件夹：将拖动的应用和目标应用放入新文件夹
+      const cancelPress = () => { clearTimeout(pressTimer); };
+      el.addEventListener('pointerup', () => {
+        cancelPress();
+        if (longPressFired) {
+          // 长按后松手，停止拖动
+          this._endDrag();
+        }
+      });
+      el.addEventListener('pointerleave', cancelPress);
+      el.addEventListener('pointercancel', cancelPress);
+      return el;
+    },
+
+    /* Pointer-based drag and drop (works on touch and mouse) */
+    _startDrag(el, startX, startY) {
+      if (this._dragGhost) return;
+      this.draggedIcon = el;
+      el.classList.add('dragging');
+
+      // Create drag ghost
+      const ghost = el.cloneNode(true);
+      ghost.className = 'app-icon drag-ghost';
+      ghost.style.position = 'fixed';
+      ghost.style.pointerEvents = 'none';
+      ghost.style.zIndex = '9999';
+      ghost.style.opacity = '0.9';
+      ghost.style.transform = 'scale(1.1)';
+      ghost.style.transition = 'transform .15s ease';
+      const rect = el.getBoundingClientRect();
+      ghost.style.left = rect.left + 'px';
+      ghost.style.top = rect.top + 'px';
+      ghost.style.width = rect.width + 'px';
+      document.body.appendChild(ghost);
+      this._dragGhost = ghost;
+      this._dragOffsetX = startX - rect.left;
+      this._dragOffsetY = startY - rect.top;
+
+      // Global move/up handlers
+      this._dragMoveHandler = (e) => this._onDragMove(e);
+      this._dragEndHandler = (e) => this._onDragEnd(e);
+      document.addEventListener('pointermove', this._dragMoveHandler);
+      document.addEventListener('pointerup', this._dragEndHandler);
+      document.addEventListener('pointercancel', this._dragEndHandler);
+    },
+
+    _onDragMove(e) {
+      if (!this._dragGhost) return;
+      this._dragGhost.style.left = (e.clientX - this._dragOffsetX) + 'px';
+      this._dragGhost.style.top = (e.clientY - this._dragOffsetY) + 'px';
+
+      // Find drop target
+      const ghostRect = this._dragGhost.getBoundingClientRect();
+      const centerX = ghostRect.left + ghostRect.width / 2;
+      const centerY = ghostRect.top + ghostRect.height / 2;
+
+      // Clear previous highlights
+      document.querySelectorAll('.drop-target').forEach(t => t.classList.remove('drop-target'));
+
+      // Find icon under pointer
+      const elements = document.elementsFromPoint(centerX, centerY);
+      for (const elem of elements) {
+        const icon = elem.closest('.app-icon');
+        if (icon && icon !== this.draggedIcon && icon.closest('.launcher-grid')) {
+          icon.classList.add('drop-target');
+          break;
+        }
+      }
+    },
+
+    _onDragEnd(e) {
+      if (!this._dragGhost) return;
+
+      // Check drop target
+      const ghostRect = this._dragGhost.getBoundingClientRect();
+      const centerX = ghostRect.left + ghostRect.width / 2;
+      const centerY = ghostRect.top + ghostRect.height / 2;
+      const elements = document.elementsFromPoint(centerX, centerY);
+      let targetIcon = null;
+      for (const elem of elements) {
+        const icon = elem.closest('.app-icon');
+        if (icon && icon !== this.draggedIcon && icon.closest('.launcher-grid')) {
+          targetIcon = icon;
+          break;
+        }
+      }
+
+      if (targetIcon && this.draggedIcon) {
         const draggedId = this.draggedIcon.dataset.appId;
-        const targetId = el.dataset.appId;
+        const targetId = targetIcon.dataset.appId;
         if (draggedId && targetId) {
           this._createFolder(draggedId, targetId);
         }
-      });
-      return el;
+      }
+
+      this._endDrag();
+    },
+
+    _endDrag() {
+      document.querySelectorAll('.drop-target').forEach(t => t.classList.remove('drop-target'));
+      if (this._dragGhost) {
+        this._dragGhost.remove();
+        this._dragGhost = null;
+      }
+      if (this.draggedIcon) {
+        this.draggedIcon.classList.remove('dragging');
+        this.draggedIcon = null;
+      }
+      if (this._dragMoveHandler) {
+        document.removeEventListener('pointermove', this._dragMoveHandler);
+        this._dragMoveHandler = null;
+      }
+      if (this._dragEndHandler) {
+        document.removeEventListener('pointerup', this._dragEndHandler);
+        document.removeEventListener('pointercancel', this._dragEndHandler);
+        this._dragEndHandler = null;
+      }
     },
 
     /* 右键上下文菜单 */

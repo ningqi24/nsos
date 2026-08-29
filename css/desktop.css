@@ -1189,6 +1189,15 @@
   transform: scale(1.1);
 }
 
+/* Drag ghost (pointer-based drag) */
+.drag-ghost {
+  user-select: none;
+  touch-action: none;
+}
+.drag-ghost .ic {
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+}
+
 /* ---------- 全部应用抽屉 ---------- */
 .app-drawer {
   position: fixed;
@@ -1378,6 +1387,36 @@
   color: var(--os-fg-2);
   text-align: center;
 }
+.ts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px 8px;
+  color: #fff;
+}
+.ts-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+.ts-clear-all {
+  font-size: 12px;
+  color: rgba(255,255,255,.7);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: var(--os-radius-sm);
+}
+.ts-clear-all:active {
+  background: rgba(255,255,255,.15);
+  color: #fff;
+}
+.ts-hint {
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255,255,255,.5);
+  padding: 12px 0 24px;
+}
 #sys-taskswitcher {
   position: fixed;
   inset: 0;
@@ -1388,6 +1427,9 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--os-dur-norm) var(--os-ease-out);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 #sys-taskswitcher.open {
   opacity: 1;
