@@ -35,7 +35,7 @@
         background: var(--os-glass, rgba(255,255,255,.06));
         color: var(--os-fg-1, rgba(255,255,255,.7));
         font-size: var(--os-font-md, 14px);
-        font-weight: var(--os-font-weight-mid, 600);
+        font-weight: var(--os-font-weight-semi, 600);
         cursor: pointer;
         transition: all var(--os-dur-fast, .15s);
         -webkit-tap-highlight-color: transparent;

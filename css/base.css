@@ -1,48 +1,10 @@
 /* ============================================================
    nsos - base.css
-   全局 reset + 设计令牌（Design Token）地基
-   后续所有主题 / 皮肤 = 一套 :root 变量，禁止散落硬编码颜色
+   全局 reset + 基础原语。
+   注意：设计令牌（颜色 / 间距 / 圆角 / 字体 / 动效…）唯一定义处是
+   tokens.css，本文件不再重复声明 :root 变量，避免两套值打架。
+   引入顺序：tokens.css -> base.css
    ============================================================ */
-
-:root {
-  /* ---- 语义色板（P4 主题引擎接管） ---- */
-  --os-bg-0:        #050608;   /* 基底深黑 */
-  --os-bg-1:        #0b0e16;   /* 深色表面 */
-  --os-bg-2:        #131826;   /* 卡片表面 */
-  --os-bg-3:        #1a2033;   /* 悬浮表面 */
-  --os-fg-0:        #f0f3f8;   /* 主文字 */
-  --os-fg-1:        rgba(240,243,248,.68); /* 次文字 */
-  --os-fg-2:        rgba(240,243,248,.42); /* 弱文字 */
-  --os-accent:      #ef9f37;   /* 强调色 · 琥珀 */
-  --os-accent-strong: #ffbd5e; /* 强调色亮 */
-  --os-accent-soft: rgba(239,159,55,.22);
-  --os-teal:        #35c4a2;   /* 青色强调 */
-  --os-blue:        #5b8def;   /* 蓝色强调 */
-  --os-glass:       rgba(255,255,255,.06); /* 毛玻璃基底 */
-  --os-glass-strong: rgba(255,255,255,.10); /* 强毛玻璃 */
-  --os-glass-border: rgba(255,255,255,.12); /* 玻璃边框 */
-  --os-glass-border-strong: rgba(255,255,255,.20); /* 强玻璃边框 */
-  --os-blur:        blur(20px) saturate(180%); /* Liquid Glass 模糊 */
-  --os-blur-strong: blur(30px) saturate(200%); /* 强模糊 */
-  --os-shadow-card: 0 4px 24px rgba(0,0,0,.3); /* 卡片阴影 */
-  --os-shadow-float: 0 8px 40px rgba(0,0,0,.4); /* 浮层阴影 */
-  --os-radius-sm:   8px;
-  --os-radius-md:   14px;
-  --os-radius-lg:   20px;
-  --os-radius-xl:   28px;
-
-  /* ---- 动效令牌（统一过渡规范） ---- */
-  --os-dur-fast:    .15s;
-  --os-dur-norm:    .3s;
-  --os-dur-slow:    .5s;
-  --os-ease-out:    cubic-bezier(.22, .61, .36, 1);
-  --os-ease-spring: cubic-bezier(.34, 1.56, .64, 1);
-  --os-ease-ios:    cubic-bezier(.25, .46, .45, .94); /* iOS 风格缓动 */
-
-  /* ---- 布局 ---- */
-  --os-safe-top:    0px;
-  --os-safe-bottom: 0px;
-}
 
 /* ---- Reset ---- */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -53,9 +15,10 @@ html, body {
   overflow: hidden;
   background: var(--os-bg-0);
   color: var(--os-fg-0);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC",
-               "Microsoft YaHei", sans-serif;
+  font-family: var(--os-font-family);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
@@ -66,27 +29,33 @@ html, body {
   inset: 0;
   overflow: hidden;
   background: var(--os-bg-0);
-  transition: background-color .4s var(--os-ease-out);
+  transition: background-color var(--os-dur-slow) var(--os-ease-out);
 }
 
-/* 全局主题切换过渡 */
+/* 全局主题切换过渡（仅颜色相关，避免 transition:all 的性能与意外动画） */
 #os-root, .os-layer, .launcher, .app-icon .ic, .hw-widget,
 .cc-tog, .cc-slider, .cc-notif, .cc-media, .cc-shortcut,
 .folder-view, .app-drawer, .notif-banner, .ctx-menu,
-#sys-cc-panel, .launcher-dock {
-  transition: background-color .4s var(--os-ease-out), border-color .4s var(--os-ease-out), color .4s var(--os-ease-out);
+#sys-cc-panel, .launcher-dock, .app-window, .app-titlebar {
+  transition:
+    background-color var(--os-dur-norm) var(--os-ease-out),
+    border-color var(--os-dur-norm) var(--os-ease-out),
+    color var(--os-dur-norm) var(--os-ease-out);
 }
 
 img { display: block; max-width: 100%; }
 button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
-input { font: inherit; color: inherit; }
+input, textarea { font: inherit; color: inherit; }
 
 /* ============================================================
  * 触觉反馈模拟（Visual Haptic Feedback）
- * 通用按压缩放效果 + 涟漪动画
+ * 仅作用于真正的按钮类元素；卡片 / 列表 / 图标各自定义反馈，
+ * 避免全局 scale 把大块内容一起压扁。
  * ============================================================ */
-button:active, [role="button"]:active, .clickable:active {
-  transform: scale(.94);
+button:active,
+.os-btn:active,
+.clickable:active {
+  transform: scale(.96);
   transition: transform .08s ease-out;
 }
 
@@ -94,7 +63,7 @@ button:active, [role="button"]:active, .clickable:active {
 .ripple {
   position: absolute;
   border-radius: 50%;
-  background: rgba(255,255,255,.3);
+  background: rgba(255,255,255,.28);
   pointer-events: none;
   transform: scale(0);
   animation: ripple-anim .5s var(--os-ease-out) forwards;

@@ -108,8 +108,9 @@
       win.className = 'app-window';
       win.innerHTML =
         '<div class="app-titlebar">' +
-        '<button class="app-back" type="button" aria-label="返回">‹</button>' +
+        '<button class="app-back" type="button" aria-label="返回"><os-icon name="chevron-left" size="22"></os-icon></button>' +
         '<span class="app-title"></span>' +
+        '<button class="app-back app-back-ghost" type="button" tabindex="-1" aria-hidden="true"></button>' +
         '</div><div class="app-body"></div>';
       win.querySelector('.app-title').textContent = m.name;
       win.querySelector('.app-back').addEventListener('click', () => nav.back());

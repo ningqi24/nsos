@@ -23,72 +23,68 @@
   text-shadow: 0 1px 3px rgba(0,0,0,.35);
   z-index: 990;
 }
-.sb-left { display: flex; align-items: center; gap: 6px; }
-.sb-right { display: flex; align-items: center; gap: 8px; }
-.sb-signal { display: flex; align-items: flex-end; gap: 2px; }
-.sb-signal i {
-  display: block;
-  width: 3px;
-  background: currentColor;
-  border-radius: 1px;
+.sb-left, .sb-right { display: flex; align-items: center; }
+.sb-left  { gap: 7px; }
+.sb-right { gap: 8px; }
+.sb-carrier { font-size: 12px; font-weight: 600; letter-spacing: .5px; }
+.sb-wifi, .sb-bt-icon {
+  display: inline-flex;
+  align-items: center;
+  opacity: .85;
+  transition: opacity var(--os-dur-fast) var(--os-ease-out);
 }
-.sb-signal i:nth-child(1) { height: 5px; }
-.sb-signal i:nth-child(2) { height: 8px; }
-.sb-signal i:nth-child(3) { height: 11px; }
-.sb-signal i:nth-child(4) { height: 14px; }
+.sb-time { font-variant-numeric: tabular-nums; letter-spacing: .2px; }
+
+/* 信号：内联 SVG 四格，强度用 data-strength 控制点亮数量 */
+.sb-signal { display: inline-flex; align-items: flex-end; }
+.sb-signal svg { display: block; width: 18px; height: 12px; overflow: visible; }
+.sb-sig-bar { fill: currentColor; transition: opacity var(--os-dur-fast) var(--os-ease-out); }
+.sb-signal[data-strength="1"] .b2,
+.sb-signal[data-strength="1"] .b3,
+.sb-signal[data-strength="1"] .b4,
+.sb-signal[data-strength="2"] .b3,
+.sb-signal[data-strength="2"] .b4,
+.sb-signal[data-strength="3"] .b4 { opacity: .22; }
+.sb-signal.off .sb-sig-bar { opacity: .25; }
+
+/* 电池：内联 SVG 外壳 + 可缩放填充 + 充电闪电 */
 .sb-battery {
-  width: 24px; height: 12px;
-  border: 1.5px solid currentColor;
-  border-radius: 3px;
-  position: relative;
-  padding: 1.5px;
+  --bat-level: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: currentColor;
 }
-.sb-battery::after {
-  content: '';
-  position: absolute;
-  right: -4px; top: 3px;
-  width: 2px; height: 5px;
-  background: currentColor;
-  border-radius: 0 1px 1px 0;
+.sb-bat-svg { display: block; width: 27px; height: 13px; }
+.sb-bat-shell { fill: none; stroke: currentColor; stroke-width: 1.5; opacity: .38; }
+.sb-bat-cap   { fill: currentColor; opacity: .38; }
+.sb-bat-fill {
+  fill: currentColor;
+  transform-box: fill-box;
+  transform-origin: left center;
+  transform: scaleX(var(--bat-level));
+  transition: transform .6s var(--os-ease-out), fill .3s var(--os-ease-out);
 }
-.sb-battery i {
-  display: block;
-  height: 100%;
-  width: 0%;
-  background: currentColor;
-  border-radius: 1px;
-  transition: width .6s ease;
-}
-.sb-battery.charging i {
-  background: #7dd87d;
-  animation: sb-bat-charge 1.4s ease-in-out infinite alternate;
-}
-/* 充电时电池图标发光 */
-.sb-battery.charging {
-  animation: sb-bat-glow 2s ease-in-out infinite alternate;
-}
+.sb-bat-bolt { fill: var(--os-bg-0); opacity: 0; transition: opacity var(--os-dur-fast); }
+.sb-battery.charging .sb-bat-fill { fill: var(--os-success); }
+.sb-battery.charging .sb-bat-bolt { opacity: .92; }
+.sb-battery.charging .sb-bat-svg { animation: sb-bat-glow 2s ease-in-out infinite alternate; }
 @keyframes sb-bat-glow {
   from { filter: drop-shadow(0 0 2px rgba(125,216,125,.4)); }
-  to { filter: drop-shadow(0 0 8px rgba(125,216,125,.8)); }
+  to   { filter: drop-shadow(0 0 8px rgba(125,216,125,.85)); }
 }
-/* 低电量警告 */
-.sb-battery.low i {
-  background: var(--os-danger);
+.sb-battery.low .sb-bat-fill {
+  fill: var(--os-danger);
   animation: sb-bat-low 1s ease-in-out infinite alternate;
 }
-@keyframes sb-bat-low {
-  from { opacity: .5; }
-  to { opacity: 1; }
-}
-@keyframes sb-bat-charge { from { opacity: .55; } to { opacity: 1; } }
+@keyframes sb-bat-low { from { opacity: .55; } to { opacity: 1; } }
 .sb-battery b.sb-bat-pct {
   font-size: 11px;
-  font-weight: 500;
-  margin-left: 3px;
-  margin-right: 2px;
-  color: currentColor;
+  font-weight: var(--os-font-weight-mid, 500);
   line-height: 1;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: currentColor;
 }
 
 /* ---------- 真锁屏 ---------- */
@@ -346,27 +342,59 @@
 .app-icon:nth-child(7) { animation-delay: .28s; }
 .app-icon:nth-child(8) { animation-delay: .32s; }
 .app-icon:nth-child(n+9) { animation-delay: .36s; }
-.app-icon:active { transform: scale(.85); }
+.app-icon:active { transform: scale(.88); }
+
+/* 图标底板：统一质感
+ * 颜色由 .ic-<name> 提供的 --ic-a / --ic-b 决定，本层只负责
+ * 渐变方向、顶部高光、内描边、投影，保证所有图标质感一致。 */
 .app-icon .ic {
+  position: relative;
   width: 60px; height: 60px;
-  border-radius: 16px;
+  border-radius: 17px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
+  background-image: linear-gradient(155deg, var(--ic-a, #9aa3b5) 0%, var(--ic-b, #5c6478) 100%);
   box-shadow:
-    0 4px 14px rgba(0,0,0,.28),
-    inset 0 1px 0 rgba(255,255,255,.25),
-    inset 0 -2px 4px rgba(0,0,0,.10);
+    0 4px 14px rgba(0,0,0,.30),
+    0 8px 22px -8px rgba(0,0,0,.55),
+    inset 0 1px 0 rgba(255,255,255,.35),
+    inset 0 -2px 6px rgba(0,0,0,.22);
+  overflow: hidden;
+  isolation: isolate;
   transition: box-shadow var(--os-dur-fast) var(--os-ease-out);
+}
+/* 顶部玻璃高光 */
+.app-icon .ic::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 50% 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 85%);
+  pointer-events: none;
+}
+/* 内部 1px 高光描边 */
+.app-icon .ic::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.14);
+  pointer-events: none;
 }
 .app-icon:active .ic {
   box-shadow:
-    0 2px 8px rgba(0,0,0,.2),
-    inset 0 1px 0 rgba(255,255,255,.15),
-    inset 0 -1px 3px rgba(0,0,0,.15);
+    0 2px 8px rgba(0,0,0,.22),
+    inset 0 1px 0 rgba(255,255,255,.22),
+    inset 0 -1px 3px rgba(0,0,0,.18);
 }
-.app-icon .ic os-icon { font-size: 28px; }
+.app-icon .ic os-icon {
+  position: relative;
+  z-index: 1;
+  font-size: 28px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.30));
+}
 .app-icon .nm {
   font-size: 11px;
   font-weight: 500;
@@ -390,18 +418,33 @@
   justify-content: center;
   line-height: 1;
   box-shadow: 0 2px 6px rgba(242,87,76,.4);
-  border: 2px solid var(--os-bg-0, #050608);
+  border: 2px solid var(--os-bg-0, #07090e);
   z-index: 2;
   animation: badge-pop .3s var(--os-ease-spring) both;
 }
 @keyframes badge-pop { from { transform: scale(0); } to { transform: scale(1); } }
-/* 图标纯色背景 */
-.ic-blue   { background: #4a90ff; }
-.ic-purple { background: #a452ff; }
-.ic-green  { background: #34d399; }
-.ic-orange { background: #ffb84d; }
-.ic-red    { background: #ff6b5e; }
-.ic-cyan   { background: #2dd4d0; }
+/* 通用图标底板：任何 `.ic` + `.ic-<name>` 组合都获得统一渐变底色与
+ * 顶部高光；尺寸 / 圆角再由各自容器覆盖（.app-icon .ic / .st-row-ic 等）。*/
+.ic {
+  background-image: linear-gradient(155deg, var(--ic-a, #9aa3b5) 0%, var(--ic-b, #5c6478) 100%);
+  border-radius: var(--os-radius-md);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.28),
+    inset 0 -1px 3px rgba(0,0,0,.18);
+}
+
+/* 图标语义色：只声明渐变端点，质感由 .ic / .app-icon .ic 统一渲染 */
+.ic-blue   { --ic-a: var(--os-ic-blue-a);   --ic-b: var(--os-ic-blue-b); }
+.ic-indigo { --ic-a: var(--os-ic-indigo-a); --ic-b: var(--os-ic-indigo-b); }
+.ic-purple { --ic-a: var(--os-ic-purple-a); --ic-b: var(--os-ic-purple-b); }
+.ic-pink   { --ic-a: var(--os-ic-pink-a);   --ic-b: var(--os-ic-pink-b); }
+.ic-red    { --ic-a: var(--os-ic-red-a);    --ic-b: var(--os-ic-red-b); }
+.ic-orange { --ic-a: var(--os-ic-orange-a); --ic-b: var(--os-ic-orange-b); }
+.ic-yellow { --ic-a: var(--os-ic-yellow-a); --ic-b: var(--os-ic-yellow-b); }
+.ic-green  { --ic-a: var(--os-ic-green-a);  --ic-b: var(--os-ic-green-b); }
+.ic-teal   { --ic-a: var(--os-ic-teal-a);   --ic-b: var(--os-ic-teal-b); }
+.ic-cyan   { --ic-a: var(--os-ic-cyan-a);   --ic-b: var(--os-ic-cyan-b); }
+.ic-gray   { --ic-a: var(--os-ic-gray-a);   --ic-b: var(--os-ic-gray-b); }
 
 /* 页面指示器 */
 /* 所有应用入口按钮 */
@@ -445,7 +488,7 @@
 }
 @keyframes dock-slide-up { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: none; } }
 .launcher-dock .app-icon { animation: none; }
-.launcher-dock .app-icon .ic { width: 52px; height: 52px; border-radius: 14px; }
+.launcher-dock .app-icon .ic { width: 52px; height: 52px; border-radius: 15px; }
 
 /* ---------- Home Indicator（底部手势条） ---------- */
 #sys-home-indicator {
@@ -477,7 +520,7 @@
 
 /* ---------- App 占位（P5） ---------- */
 #layer-app {
-  background: #0c0f1e;
+  background: var(--os-bg-1);
 }
 .app-placeholder {
   margin: auto;
@@ -492,7 +535,7 @@
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   gap: 6px;
-  background: radial-gradient(circle at 50% 30%, rgba(63,123,255,.16), transparent 60%), #0c0f1e;
+  background: radial-gradient(circle at 50% 30%, var(--os-accent-soft), transparent 60%), var(--os-bg-1);
   color: var(--os-fg-0);
 }
 .app-clock .ck-time {
@@ -504,39 +547,9 @@
 .app-clock .ck-sub { margin-top: 18px; font-size: 11px; color: var(--os-fg-2); opacity: .7; }
 
 /* ============================================================
- * P5+ 视觉增强：图标质感 / Dock 放大 / 应用启动动画 / 玻璃效果
+ * P5+ 视觉增强：Dock 放大 / 应用启动动画 / 玻璃效果
+ * （图标质感已统一到上方 .app-icon .ic，此处不再重复定义）
  * ============================================================ */
-
-/* 图标质感增强：squircle 圆角 + 内光 + 倒影 */
-.app-icon .ic {
-  position: relative;
-  overflow: hidden;
-}
-.app-icon .ic::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(255,255,255,.18) 0%, transparent 50%);
-  pointer-events: none;
-  border-radius: inherit;
-}
-.app-icon .ic::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 40%;
-  background: linear-gradient(180deg, transparent, rgba(0,0,0,.08));
-  pointer-events: none;
-  border-radius: inherit;
-}
-
-/* 图标按压波纹效果 */
-.app-icon .ic {
-  position: relative;
-}
-.app-icon:active .ic::before {
-  background: linear-gradient(180deg, rgba(255,255,255,.28) 0%, transparent 50%);
-}
 
 /* Dock 放大效果（桌面端 hover） */
 .launcher-dock .app-icon {
@@ -626,11 +639,7 @@
   to { opacity: 1; transform: none; }
 }
 
-/* 状态栏图标微动画 */
-.sb-signal i {
-  transition: height .3s var(--os-ease-out);
-}
-.sb-signal.off i { height: 3px !important; opacity: .3; }
+/* 状态栏信号已改为 SVG，高度由 data-strength 控制点亮（见上方规则） */
 
 /* 滑杆增强 */
 .cc-slider .os-slider {
@@ -892,8 +901,6 @@
 }
 
 /* ---------- 状态栏增强：运营商 / WiFi / 蓝牙图标 ---------- */
-.sb-carrier { font-size: 12px; font-weight: 600; color: var(--os-fg-0); letter-spacing: .5px; }
-.sb-wifi, .sb-bt-icon { display: inline-flex; align-items: center; opacity: .8; transition: opacity var(--os-dur-fast); }
 .sb-wifi { margin-left: 2px; }
 .sb-bt-icon { margin-right: 2px; }
 
@@ -917,7 +924,7 @@
 .cc-media-art {
   width: 40px; height: 40px;
   border-radius: var(--os-radius-md);
-  background: linear-gradient(135deg, #a452ff, #5b8def);
+  background: linear-gradient(135deg, var(--os-ic-purple-a), var(--os-ic-blue-a));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2074,7 +2081,7 @@
   color: var(--os-fg-0);
   transition: all var(--os-dur-fast);
 }
-.pm-power-off .pm-ic { color: #f2574c; }
+.pm-power-off .pm-ic { color: var(--os-danger); }
 .pm-power-off:hover .pm-ic { background: rgba(242,87,76,.15); border-color: rgba(242,87,76,.3); }
 .pm-restart .pm-ic { color: var(--os-accent); }
 .pm-restart:hover .pm-ic { background: var(--os-accent-soft); border-color: rgba(239,159,55,.3); }
@@ -2149,7 +2156,7 @@
 }
 .pc-cancel { color: var(--os-fg-1); }
 .pc-cancel:hover { background: rgba(255,255,255,.06); }
-.pc-confirm { color: #f2574c; border-left: 1px solid var(--os-glass-border); }
+.pc-confirm { color: var(--os-danger); border-left: 1px solid var(--os-glass-border); }
 .pc-confirm:hover { background: rgba(242,87,76,.1); }
 
 /* 通知列表头部 */

@@ -1,44 +1,61 @@
 /* ============================================================
- * nsos - tokens.css (P4 铺垫 · 设计层定稿)
- * Design Token 唯一权威来源：色 / 间距 / 圆角 / 字体 / 动效 / 阴影
- * 所有组件与页面只消费 var(--os-*) ，禁止散落硬编码。
- * 主题引擎（P4）只需覆盖这一套变量即可整体换肤/切暗色。
- * 引入顺序：base.css -> tokens.css（tokens 覆盖并集齐全部）-> 其余
+ * nsos - tokens.css
+ * Design Token 唯一权威来源。
+ * 本文件是整个系统色 / 间距 / 圆角 / 字体 / 动效 / 阴影 / 图标色的
+ * 唯一定义处。所有组件与页面只消费 var(--os-*)，禁止硬编码。
+ *
+ * 主题切换：覆盖本文件变量即可整体换肤。
+ *   默认（暗色·石墨暗夜）  -> :root
+ *   亮色                  -> [data-theme="light"] / .os-theme-light
+ *
+ * 引入顺序：tokens.css 必须最先加载，其余样式再消费其变量。
  * ============================================================ */
 
 :root {
-  /* ================= 语义色板 ·「琥珀 × 石墨暗夜」=================
-   * 设计语言：去 AI 味多色渐变，改为单点暖色强调 + 深石墨层次。
-   * 强调只用一处（琥珀），次级辅以青光，避免彩虹渐变。 */
-  --os-bg-0:        #07090e;   /* 基底近黑（微带冷调） */
-  --os-bg-1:        #0f131b;   /* 深色表面 */
-  --os-bg-2:        #161c27;   /* 卡片表面 */
-  --os-bg-3:        #1e2634;   /* 浮层表面 */
+  /* ================= 中性层（石墨暗夜）=================
+   * 层次：bg-0 基底 < bg-1 表面 < bg-2 卡片 < bg-3 浮层 */
+  --os-bg-0:        #07090e;
+  --os-bg-1:        #0f131b;
+  --os-bg-2:        #161c27;
+  --os-bg-3:        #1e2634;
 
-  --os-fg-0:        #f5f6f8;   /* 主文字 */
-  --os-fg-1:        rgba(245,246,248,.72); /* 次文字 */
-  --os-fg-2:        rgba(245,246,248,.46); /* 弱文字 */
-  --os-fg-3:        rgba(245,246,248,.26); /* 禁用文字 */
+  --os-fg-0:        #f5f6f8;
+  --os-fg-1:        rgba(245,246,248,.72);
+  --os-fg-2:        rgba(245,246,248,.46);
+  --os-fg-3:        rgba(245,246,248,.28);
 
-  --os-accent:      #ef9f37;   /* 主强调色 · 琥珀 */
-  --os-accent-strong:#ffbd5e;  /* 琥珀亮端 */
-  --os-accent-soft: rgba(239,159,55,.22); /* 强调色浅底 */
-  --os-teal:        #35c4a2;   /* 次级强调 · 青光 */
-  --os-success:     #3ecf6e;
-  --os-warning:     #ef9f37;
-  --os-danger:      #f2574c;
+  --os-border:      rgba(255,255,255,.10);
+  --os-border-strong: rgba(255,255,255,.18);
 
-  --os-glass:       rgba(255,255,255,.06); /* 毛玻璃基底 */
-  --os-glass-strong: rgba(255,255,255,.10);
-  --os-glass-border: rgba(255,255,255,.10);  /* 毛玻璃描边 */
+  /* ================= 品牌强调（单点琥珀 + 次级青光）================= */
+  --os-accent:        #ef9f37;
+  --os-accent-strong: #ffbd5e;
+  --os-accent-soft:   rgba(239,159,55,.16);
+
+  --os-teal:          #35c4a2;
+
+  /* 语义色（成功 / 警告 / 危险 / 信息）*/
+  --os-success:       #3ecf6e;
+  --os-warning:       #ef9f37;
+  --os-danger:        #f2574c;
+  --os-info:          #5b8def;
+
+  /* ================= 毛玻璃 ================= */
+  --os-glass:               rgba(255,255,255,.06);
+  --os-glass-strong:        rgba(255,255,255,.10);
+  --os-glass-border:        rgba(255,255,255,.10);
   --os-glass-border-strong: rgba(255,255,255,.16);
-  --os-border:      rgba(255,255,255,.1);  /* 描边 */
-  --os-blur:        blur(20px) saturate(180%);
-  --os-blur-strong: blur(30px) saturate(200%);
-  --os-shadow-card: 0 4px 24px rgba(0,0,0,.3);
-  --os-shadow-float: 0 8px 40px rgba(0,0,0,.4);
+  --os-blur:                blur(20px) saturate(180%);
+  --os-blur-strong:         blur(30px) saturate(200%);
 
-  /* ================= 间距（4 进制） ================= */
+  /* ================= 阴影 ================= */
+  --os-shadow-1:     0 2px 8px   rgba(0,0,0,.25);
+  --os-shadow-2:     0 8px 24px  rgba(0,0,0,.35);
+  --os-shadow-3:     0 18px 48px rgba(0,0,0,.50);
+  --os-shadow-card:  0 4px 24px  rgba(0,0,0,.30);
+  --os-shadow-float: 0 8px 40px  rgba(0,0,0,.40);
+
+  /* ================= 间距（4 进制）================= */
   --os-space-1: 4px;
   --os-space-2: 8px;
   --os-space-3: 12px;
@@ -47,77 +64,111 @@
   --os-space-6: 32px;
 
   /* ================= 圆角 ================= */
-  --os-radius-sm: 8px;
-  --os-radius-md: 12px;
-  --os-radius-lg: 18px;
-  --os-radius-xl: 24px;
+  --os-radius-sm:   8px;
+  --os-radius-md:   12px;
+  --os-radius-lg:   18px;
+  --os-radius-xl:   24px;
   --os-radius-full: 999px;
 
   /* ================= 字体 ================= */
-  --os-font-xs: 11px;
-  --os-font-sm: 12px;
-  --os-font-md: 14px;
-  --os-font-lg: 16px;
-  --os-font-xl: 20px;
+  --os-font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC",
+                    "Microsoft YaHei", sans-serif;
+  --os-font-mono: "SF Mono", "JetBrains Mono", "Fira Code", Consolas, monospace;
+
+  --os-font-xs:  11px;
+  --os-font-sm:  12px;
+  --os-font-md:  14px;
+  --os-font-lg:  16px;
+  --os-font-xl:  20px;
   --os-font-2xl: 28px;
+
   --os-font-weight-norm: 400;
-  --os-font-weight-mid: 600;
+  --os-font-weight-mid:  500;
+  --os-font-weight-semi: 600;
   --os-font-weight-bold: 700;
 
   /* ================= 动效 ================= */
-  --os-dur-fast:    .15s;
-  --os-dur-norm:    .3s;
-  --os-dur-slow:    .5s;
+  --os-dur-fast: .15s;
+  --os-dur-norm: .30s;
+  --os-dur-slow: .50s;
   --os-ease-out:    cubic-bezier(.22, .61, .36, 1);
+  --os-ease-ios:    cubic-bezier(.25, .46, .45, .94);
   --os-ease-spring: cubic-bezier(.34, 1.56, .64, 1);
 
-  /* ================= 阴影 ================= */
-  --os-shadow-1: 0 2px 8px  rgba(0,0,0,.25);
-  --os-shadow-2: 0 8px 24px rgba(0,0,0,.35);
-  --os-shadow-3: 0 18px 48px rgba(0,0,0,.5);
-
-  /* ================= 布局（刘海/手势条） ================= */
+  /* ================= 布局（刘海 / 手势条）================= */
   --os-safe-top:    0px;
   --os-safe-bottom: 0px;
 
-  /* ================= 图标 ================= */
+  /* ================= 图标尺寸 ================= */
   --os-icon-sm: 16px;
   --os-icon-md: 20px;
   --os-icon-lg: 24px;
 
-  /* ================= 应用背景（深色模式） ================= */
-  --os-app-bg:     rgba(15,19,27,.95);
-  --os-app-card:   rgba(255,255,255,.06);
-  --os-app-input:  rgba(255,255,255,.08);
+  /* ================= 应用背景 ================= */
+  --os-app-bg:    rgba(15,19,27,.95);
+  --os-app-card:  rgba(255,255,255,.06);
+  --os-app-input: rgba(255,255,255,.08);
+
+  /* ============================================================
+   * 应用图标调色板（唯一来源）
+   * 每个语义色由 2 个渐变端点定义（深 -> 浅由使用方决定）。
+   * .ic-<name> 只负责设置 --ic-a / --ic-b，质感由 .app-icon .ic 统一渲染。
+   * 色相分散但明度/饱和度收敛，避免“彩虹贴纸”感。
+   * ============================================================ */
+  --os-ic-blue-a:   #6a9bff;  --os-ic-blue-b:   #3f6fd6;
+  --os-ic-indigo-a: #7c83f5;  --os-ic-indigo-b: #4c50c8;
+  --os-ic-purple-a: #b06bff;  --os-ic-purple-b: #7c3fd6;
+  --os-ic-pink-a:   #f476ac;  --os-ic-pink-b:   #c8427f;
+  --os-ic-red-a:    #f4726a;  --os-ic-red-b:    #c93a34;
+  --os-ic-orange-a: #ffb45c;  --os-ic-orange-b: #d67c1a;
+  --os-ic-yellow-a: #f7cf5c;  --os-ic-yellow-b: #cf9a1f;
+  --os-ic-green-a:  #55dd83;  --os-ic-green-b:  #27a352;
+  --os-ic-teal-a:   #4dd8b8;  --os-ic-teal-b:   #1f9478;
+  --os-ic-cyan-a:   #45e0dd;  --os-ic-cyan-b:   #1aa3a8;
+  --os-ic-gray-a:   #9aa3b5;  --os-ic-gray-b:   #5c6478;
 }
 
-/* ---------- 亮色主题预留（P4 开启，默认暗色） ---------- */
+/* ================= 亮色主题 =================
+ * 同时支持 [data-theme="light"] 与遗留 .os-theme-light 两种开关。 */
+[data-theme="light"],
 .os-theme-light {
-  --os-bg-0:        #f3f4f6;
+  --os-bg-0:        #f2f3f6;
   --os-bg-1:        #ffffff;
-  --os-bg-2:        #eceef2;
-  --os-bg-3:        #e1e4ea;
+  --os-bg-2:        #e9ebf0;
+  --os-bg-3:        #dfe2e9;
+
   --os-fg-0:        #1a1d24;
   --os-fg-1:        rgba(26,29,36,.72);
-  --os-fg-2:        rgba(26,29,36,.5);
-  --os-fg-3:        rgba(26,29,36,.3);
-  --os-accent:      #db8a24;
-  --os-accent-strong:#f0a13a;
-  --os-accent-soft: rgba(219,138,36,.16);
-  --os-glass:       rgba(26,29,36,.06);
-  --os-glass-strong: rgba(26,29,36,.10);
-  --os-glass-border: rgba(26,29,36,.12);
-  --os-glass-border-strong: rgba(26,29,36,.20);
+  --os-fg-2:        rgba(26,29,36,.50);
+  --os-fg-3:        rgba(26,29,36,.32);
+
+  --os-border:        rgba(26,29,36,.12);
+  --os-border-strong: rgba(26,29,36,.22);
+
+  --os-accent:        #d9861f;
+  --os-accent-strong: #b96f12;
+  --os-accent-soft:   rgba(217,134,31,.14);
+
+  --os-teal:   #189c80;
+  --os-success:#22a552;
+  --os-warning:#d9861f;
+  --os-danger: #d43b32;
+  --os-info:   #3f6fd6;
+
+  --os-glass:               rgba(26,29,36,.05);
+  --os-glass-strong:        rgba(26,29,36,.09);
+  --os-glass-border:        rgba(26,29,36,.10);
+  --os-glass-border-strong: rgba(26,29,36,.18);
   --os-blur:        blur(20px) saturate(180%);
   --os-blur-strong: blur(30px) saturate(200%);
-  --os-border:      rgba(26,29,36,.12);
-  --os-shadow-1: 0 2px 8px  rgba(26,29,36,.08);
-  --os-shadow-2: 0 8px 24px rgba(26,29,36,.12);
-  --os-shadow-3: 0 18px 48px rgba(26,29,36,.18);
-  --os-shadow-card: 0 4px 24px rgba(26,29,36,.08);
-  --os-shadow-float: 0 8px 40px rgba(26,29,36,.12);
-  /* Light mode app backgrounds */
-  --os-app-bg:     rgba(255,255,255,.95);
-  --os-app-card:   rgba(0,0,0,.03);
-  --os-app-input:  rgba(0,0,0,.04);
+
+  --os-shadow-1:     0 2px 8px   rgba(26,29,36,.08);
+  --os-shadow-2:     0 8px 24px  rgba(26,29,36,.12);
+  --os-shadow-3:     0 18px 48px rgba(26,29,36,.18);
+  --os-shadow-card:  0 4px 24px  rgba(26,29,36,.08);
+  --os-shadow-float: 0 8px 40px  rgba(26,29,36,.12);
+
+  --os-app-bg:    rgba(255,255,255,.95);
+  --os-app-card:  rgba(0,0,0,.03);
+  --os-app-input: rgba(0,0,0,.05);
 }

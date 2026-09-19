@@ -27,7 +27,7 @@
       .row { display: flex; align-items: baseline; gap: var(--os-space-2, 8px); }
       .title {
         font-size: var(--os-font-md, 13px);
-        font-weight: var(--os-font-weight-mid, 600);
+        font-weight: var(--os-font-weight-semi, 600);
         color: var(--os-fg-0, #fff);
       }
       .time { font-size: var(--os-font-xs, 10px); color: var(--os-fg-2, rgba(255,255,255,.45)); margin-left: auto; }

@@ -25,14 +25,29 @@
       bar.id = 'sys-statusbar';
       bar.innerHTML = `
         <div class="sb-left">
-          <span class="sb-signal"><i></i><i></i><i></i><i></i></span>
+          <span class="sb-signal" data-strength="4" aria-hidden="true">
+            <svg viewBox="0 0 18 12">
+              <rect class="sb-sig-bar b1" x="0"  y="7"   width="3" height="5"    rx="1"/>
+              <rect class="sb-sig-bar b2" x="5"  y="4.5" width="3" height="7.5"  rx="1"/>
+              <rect class="sb-sig-bar b3" x="10" y="2"   width="3" height="10"   rx="1"/>
+              <rect class="sb-sig-bar b4" x="15" y="0"   width="3" height="12"   rx="1"/>
+            </svg>
+          </span>
           <span class="sb-carrier">nsos</span>
           <span class="sb-wifi"><os-icon name="wifi" size="13"></os-icon></span>
           <span class="sb-time"></span>
         </div>
         <div class="sb-right">
           <span class="sb-bt-icon"><os-icon name="bluetooth" size="13"></os-icon></span>
-          <span class="sb-battery"><i class="sb-bat-fill"></i><b class="sb-bat-pct">--%</b></span>
+          <span class="sb-battery" role="img" aria-label="电量">
+            <svg class="sb-bat-svg" viewBox="0 0 27 13" aria-hidden="true">
+              <rect class="sb-bat-shell" x="0.75" y="0.75" width="22.5" height="11.5" rx="3.75"/>
+              <rect class="sb-bat-fill"  x="2.25" y="2.25" width="19.5" height="8.5"  rx="2.25"/>
+              <path class="sb-bat-cap" d="M25 4.2a1.6 1.6 0 0 1 0 4.6z"/>
+              <path class="sb-bat-bolt" d="M11.6 2.3 8.1 7.2h2.6l-1 3.5 3.6-5.1h-2.6z"/>
+            </svg>
+            <b class="sb-bat-pct">--%</b>
+          </span>
         </div>`;
       host.appendChild(bar);
 
@@ -86,7 +101,8 @@
       if (b && OS.device.batterySupported) {
         const level = Math.round(b.level * 100);
         const wasCharging = this._prevCharging;
-        this.batFill.style.width = level + '%';
+        // SVG 填充用 CSS 变量缩放（0~1），不再依赖宽度百分比
+        this.batEl.style.setProperty('--bat-level', Math.max(0, Math.min(1, b.level)).toFixed(3));
         this.batPct.textContent = level + '%';
         this.batEl.classList.toggle('charging', !!b.charging);
 
@@ -97,9 +113,8 @@
         }
         this._prevCharging = !!b.charging;
 
-        // 低电量着色 + 横幅提醒
+        // 低电量着色 + 横幅提醒（着色由 .low 类控制）
         if (level <= 20 && !b.charging) {
-          this.batFill.style.background = '#f2574c';
           this.batEl.classList.add('low');
           // 低电量横幅
           if (level <= 15 && !this._lowBatNotified) {
@@ -110,12 +125,11 @@
             }
           }
         } else {
-          this.batFill.style.background = '';
           this.batEl.classList.remove('low');
           if (level > 20) this._lowBatNotified = false;
         }
       } else {
-        this.batFill.style.width = '0%';
+        this.batEl.style.setProperty('--bat-level', '0');
         this.batPct.textContent = '--%';
       }
     },
@@ -151,11 +165,10 @@
       }, 4000);
     },
 
-    /* 连通性状态（模拟） */
+    /* 连通性状态（模拟）：data-strength 控制信号点亮格数 */
     _updateConnectivity() {
-      // 信号强度随机模拟（4格满格）
-      const signalBars = this.el.querySelectorAll('.sb-signal i');
-      signalBars.forEach(bar => { bar.style.opacity = '1'; });
+      const sig = this.el.querySelector('.sb-signal');
+      if (sig) sig.dataset.strength = '4';
     },
   };
 

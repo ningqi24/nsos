@@ -33,20 +33,9 @@
       let theme = OS.storage.get('cc:dark', true) ? 'dark' : 'light';
       let wallpaperIdx = parseInt(OS.storage.get('wallpaper', '0'), 10);
 
-      const wallpapers = [
-        { name: '深空', css: 'radial-gradient(ellipse at 30% 20%, #1a2a5e, #050608 70%)' },
-        { name: '琥珀之夜', css: 'radial-gradient(ellipse at 50% 40%, #2a1a08, #050608 70%)' },
-        { name: '极光', css: 'linear-gradient(180deg, #0a0e2e, #1a4a3e, #0a0e2e)' },
-        { name: '暮光', css: 'linear-gradient(180deg, #1a0830, #2a1050, #050608)' },
-        { name: '深海', css: 'radial-gradient(ellipse at 60% 60%, #0a2a4e, #050608 70%)' },
-        { name: '紫罗兰', css: 'linear-gradient(135deg, #1a0b3e, #3b1466, #0a0210)' },
-        { name: '日出', css: 'linear-gradient(180deg, #1a0820, #4a1a3e, #8a3a1a, #1a0820)' },
-        { name: '薄荷', css: 'linear-gradient(135deg, #0a2e2a, #1a5e4e, #0a1e18)' },
-        { name: '银河', css: 'radial-gradient(ellipse at 40% 30%, #2a1a5e 0%, #1a0a3e 40%, #050608 80%), radial-gradient(ellipse at 70% 70%, #5e1a3e 0%, transparent 50%)' },
-        { name: '星空', css: 'radial-gradient(ellipse at 20% 50%, #0a1a3e 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, #1a0a3e 0%, transparent 50%), linear-gradient(180deg, #050608, #0a0e1e)' },
-        { name: '日落', css: 'linear-gradient(180deg, #1a0820 0%, #4a2010 25%, #8a4a20 50%, #4a2010 75%, #1a0820 100%)' },
-        { name: '霓虹', css: 'linear-gradient(135deg, #0a0a2e, #2a0a4e, #4a0a3e, #0a0a2e)' },
-      ];
+      // 壁纸清单统一来自 OS.wallpapers（与桌面共用同一份，避免索引错位）
+      const wallpapers = OS.wallpapers || [];
+      if (wallpaperIdx >= wallpapers.length) wallpaperIdx = 0;
 
       const renderMain = () => {
         const d = (OS.device && OS.device.info) || {};
@@ -57,50 +46,61 @@
         host.innerHTML = `
           <div class="app-settings">
             <div class="st-hero">
-              <div class="st-hero-icon"><os-icon name="settings" size="28"></os-icon></div>
+              <div class="st-hero-icon"><os-icon name="settings" size="30"></os-icon></div>
               <div class="st-hero-info">
                 <div class="st-hero-name">nsos</div>
-                <div class="st-hero-ver">${verTxt}</div>
+                <div class="st-hero-ver">${verTxt} · ${d.model || '设备'}</div>
+              </div>
+              <div class="st-hero-badge"><span class="st-hero-badge-dot"></span>${d.battery || '—'}</div>
+            </div>
+
+            <div class="st-group">
+              <div class="st-group-label">连接</div>
+              <div class="st-section">
+                <div class="st-row-item" data-sec="wifi">
+                  <div class="st-row-ic ic-blue"><os-icon name="wifi" size="18"></os-icon></div>
+                  <div class="st-row-body"><span class="st-row-label">Wi-Fi</span><span class="st-row-val">${OS.storage.get('cc:wifi', true) ? '已连接' : '关闭'}</span></div>
+                </div>
+                <div class="st-row-item" data-sec="bluetooth">
+                  <div class="st-row-ic ic-indigo"><os-icon name="bluetooth" size="18"></os-icon></div>
+                  <div class="st-row-body"><span class="st-row-label">蓝牙</span><span class="st-row-val">${OS.storage.get('cc:bluetooth', false) ? '已开启' : '关闭'}</span></div>
+                </div>
               </div>
             </div>
-            <div class="st-section">
-              <div class="st-row-item" data-sec="display">
-                <div class="st-row-ic ic-blue"><os-icon name="brightness" size="16"></os-icon></div>
-                <div class="st-row-body"><span class="st-row-label">显示与亮度</span><span class="st-row-val">${theme === 'dark' ? '深色' : '浅色'}</span></div>
-              </div>
-              <div class="st-row-item" data-sec="sound">
-                <div class="st-row-ic ic-purple"><os-icon name="volume" size="16"></os-icon></div>
-                <div class="st-row-body"><span class="st-row-label">声音与触感</span><span class="st-row-val">音量 ${volume}</span></div>
-              </div>
-              <div class="st-row-item" data-sec="wallpaper">
-                <div class="st-row-ic ic-cyan"><os-icon name="photos" size="16"></os-icon></div>
-                <div class="st-row-body"><span class="st-row-label">壁纸</span><span class="st-row-val">${wallpaperName}</span></div>
-              </div>
-            </div>
-            <div class="st-section">
-              <div class="st-row-item" data-sec="wifi">
-                <div class="st-row-ic ic-blue"><os-icon name="wifi" size="16"></os-icon></div>
-                <div class="st-row-body"><span class="st-row-label">Wi-Fi</span><span class="st-row-val">${OS.storage.get('cc:wifi', true) ? '已连接' : '关闭'}</span></div>
-              </div>
-              <div class="st-row-item" data-sec="bluetooth">
-                <div class="st-row-ic ic-blue"><os-icon name="bluetooth" size="16"></os-icon></div>
-                <div class="st-row-body"><span class="st-row-label">蓝牙</span><span class="st-row-val">${OS.storage.get('cc:bluetooth', false) ? '已开启' : '关闭'}</span></div>
+
+            <div class="st-group">
+              <div class="st-group-label">个性化</div>
+              <div class="st-section">
+                <div class="st-row-item" data-sec="display">
+                  <div class="st-row-ic ic-blue"><os-icon name="brightness" size="18"></os-icon></div>
+                  <div class="st-row-body"><span class="st-row-label">显示与亮度</span><span class="st-row-val">${theme === 'dark' ? '深色' : '浅色'}</span></div>
+                </div>
+                <div class="st-row-item" data-sec="sound">
+                  <div class="st-row-ic ic-purple"><os-icon name="volume" size="18"></os-icon></div>
+                  <div class="st-row-body"><span class="st-row-label">声音与触感</span><span class="st-row-val">音量 ${volume}</span></div>
+                </div>
+                <div class="st-row-item" data-sec="wallpaper">
+                  <div class="st-row-ic ic-cyan"><os-icon name="photos" size="18"></os-icon></div>
+                  <div class="st-row-body"><span class="st-row-label">壁纸</span><span class="st-row-val">${wallpaperName}</span></div>
+                </div>
               </div>
             </div>
-            <div class="st-section">
-              <div class="st-row-item" data-sec="general">
-                <div class="st-row-ic ic-orange"><os-icon name="settings" size="16"></os-icon></div>
-                <div class="st-row-body"><span class="st-row-label">通用</span><span class="st-row-val">关于本机 · 更新</span></div>
-              </div>
-            </div>
-            <div class="st-section">
-              <div class="st-row-item" data-sec="battery">
-                <div class="st-row-ic ic-green"><os-icon name="battery" size="16"></os-icon></div>
-                <div class="st-row-body"><span class="st-row-label">电池</span><span class="st-row-val">${d.battery || '—'}</span></div>
-              </div>
-              <div class="st-row-item" data-sec="storage">
-                <div class="st-row-ic ic-red"><os-icon name="save" size="16"></os-icon></div>
-                <div class="st-row-body"><span class="st-row-label">存储空间</span><span class="st-row-val">${d.storage || '—'}</span></div>
+
+            <div class="st-group">
+              <div class="st-group-label">设备</div>
+              <div class="st-section">
+                <div class="st-row-item" data-sec="battery">
+                  <div class="st-row-ic ic-green"><os-icon name="battery" size="18"></os-icon></div>
+                  <div class="st-row-body"><span class="st-row-label">电池</span><span class="st-row-val">${d.battery || '—'}</span></div>
+                </div>
+                <div class="st-row-item" data-sec="storage">
+                  <div class="st-row-ic ic-red"><os-icon name="save" size="18"></os-icon></div>
+                  <div class="st-row-body"><span class="st-row-label">存储空间</span><span class="st-row-val">${d.storage || '—'}</span></div>
+                </div>
+                <div class="st-row-item" data-sec="general">
+                  <div class="st-row-ic ic-orange"><os-icon name="settings" size="18"></os-icon></div>
+                  <div class="st-row-body"><span class="st-row-label">通用</span><span class="st-row-val">关于本机 · 更新</span></div>
+                </div>
               </div>
             </div>
           </div>`;
@@ -115,7 +115,7 @@
 
       const renderSection = () => {
         let html = '';
-        const backBtn = `<div class="st-section-header"><button class="st-back-btn" id="st-back">‹ 设置</button><span class="st-section-title">${getSectionTitle(currentSection)}</span></div>`;
+        const backBtn = `<div class="st-section-header"><button class="st-back-btn" id="st-back"><os-icon name="chevron-left" size="18"></os-icon><span>设置</span></button><span class="st-section-title">${getSectionTitle(currentSection)}</span></div>`;
 
         switch (currentSection) {
           case 'display':
@@ -436,9 +436,7 @@
           item.addEventListener('click', () => {
             wallpaperIdx = parseInt(item.dataset.idx, 10);
             OS.storage.set('wallpaper', wallpaperIdx);
-            const wp = wallpapers[wallpaperIdx];
-            const home = document.querySelector('#layer-home .launcher');
-            if (home) home.style.background = wp.css;
+            if (OS.applyWallpaper) OS.applyWallpaper(wallpaperIdx);
             host.querySelectorAll('.st-wp-item').forEach(el => el.classList.remove('active'));
             item.classList.add('active');
             if (OS.ui && OS.ui.toast) OS.ui.toast('壁纸已更换', { ms: 800 });
@@ -605,11 +603,7 @@
       };
 
       // Apply wallpaper on mount
-      const wp = wallpapers[wallpaperIdx];
-      if (wp) {
-        const home = document.querySelector('#layer-home .launcher');
-        if (home) home.style.background = wp.css;
-      }
+      if (OS.applyWallpaper) OS.applyWallpaper(wallpaperIdx);
 
       renderMain();
       return () => {};

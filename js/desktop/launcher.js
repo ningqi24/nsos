@@ -607,15 +607,16 @@
       }, 0);
     },
 
-    /* 切换壁纸 */
+    /* 切换壁纸（清单来自 OS.wallpapers，唯一来源） */
     _cycleWallpaper() {
-      const current = parseInt(OS.storage.get('wallpaper', '0'), 10);
-      const next = (current + 1) % 5;
+      const list = OS.wallpapers || [];
+      if (!list.length) return;
+      const current = parseInt(OS.storage.get('wallpaper', '0'), 10) || 0;
+      const next = (current + 1) % list.length;
       OS.storage.set('wallpaper', String(next));
       this._applyWallpaper();
-      const names = ['深空', '琥珀之夜', '极光', '暮光', '深海'];
       const toast = OS.ui && OS.ui.toast;
-      if (toast) toast('壁纸：' + names[next], { ms: 1500 });
+      if (toast) toast('壁纸：' + (list[next] && list[next].name || next), { ms: 1500 });
     },
 
     /* 切换主题 */
@@ -684,19 +685,10 @@
       if (this.drawerOverlay) this.drawerOverlay.classList.remove('open');
     },
 
-    /* 应用保存的壁纸设置 */
+    /* 应用保存的壁纸设置（清单来自 OS.wallpapers） */
     _applyWallpaper() {
-      const wallpapers = [
-        { name: '深空', css: 'radial-gradient(ellipse at 30% 20%, #1a2a5e, #050608 70%)' },
-        { name: '琥珀之夜', css: 'radial-gradient(ellipse at 50% 40%, #2a1a08, #050608 70%)' },
-        { name: '极光', css: 'linear-gradient(180deg, #0a0e2e, #1a4a3e, #0a0e2e)' },
-        { name: '暮光', css: 'linear-gradient(180deg, #1a0830, #2a1050, #050608)' },
-        { name: '深海', css: 'radial-gradient(ellipse at 60% 60%, #0a2a4e, #050608 70%)' },
-      ];
-      const idx = parseInt(OS.storage.get('wallpaper', '0'), 10);
-      const wp = wallpapers[idx] || wallpapers[0];
-      const launcher = document.querySelector('.launcher');
-      if (launcher) launcher.style.background = wp.css;
+      const idx = parseInt(OS.storage.get('wallpaper', '0'), 10) || 0;
+      if (OS.applyWallpaper) OS.applyWallpaper(idx);
       this._spawnParticles();
     },
 

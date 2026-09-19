@@ -18,7 +18,7 @@
         border: none;
         border-radius: var(--os-radius-md, 12px);
         font-size: var(--os-font-md, 14px);
-        font-weight: var(--os-font-weight-mid, 600);
+        font-weight: var(--os-font-weight-semi, 600);
         cursor: pointer;
         transition: transform var(--os-dur-fast, .15s) var(--os-ease-out),
                     background var(--os-dur-fast, .15s),
